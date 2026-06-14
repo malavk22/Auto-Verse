@@ -27,6 +27,8 @@ class Car(Base):
     engine_cc = Column(Integer)
     seats = Column(Integer)
     service_cost = Column(Numeric(10, 2))
+    image_url = Column(String(500), nullable=True)
+    gallery_images = Column(String, nullable=True)
     view_count = Column(Integer, default=0, server_default="0")
     compare_count = Column(Integer, default=0, server_default="0")
     is_active = Column(Integer, default=1, server_default="1")  # BIT as INT for MSSQL compat

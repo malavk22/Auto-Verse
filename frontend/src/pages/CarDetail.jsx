@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getCar } from '../api/cars'
 import { formatLakh, formatINR } from '../utils/formatCurrency'
+import brandImages from '../utils/brandImages'
+import { useCompare } from '../context/CompareContext'
 
 const FUEL_COLORS = {
   Petrol: 'bg-orange-100 text-orange-700',
@@ -25,6 +27,15 @@ export default function CarDetail() {
   const [car, setCar] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [activeImg, setActiveImg] = useState(0)
+  const { isInCompare, addToCompare, removeFromCompare, compareList } = useCompare()
+
+  const gallery = car
+    ? (car.gallery_images?.length ? car.gallery_images : [car.image_url || brandImages[car.brand?.name]].filter(Boolean))
+    : []
+
+  const prev = useCallback(() => setActiveImg(i => (i - 1 + gallery.length) % gallery.length), [gallery.length])
+  const next = useCallback(() => setActiveImg(i => (i + 1) % gallery.length), [gallery.length])
 
   useEffect(() => {
     setLoading(true)
@@ -56,11 +67,68 @@ export default function CarDetail() {
       <Link to="/cars" className="text-sm text-primary hover:underline mb-6 inline-block">← Back to listing</Link>
 
       <div className="bg-white rounded-xl shadow-card overflow-hidden">
-        {/* Hero image placeholder */}
-        <div className="h-64 bg-gradient-to-br from-surface-alt to-border flex items-center justify-center">
-          <svg className="w-32 h-32 text-gray-300" fill="currentColor" viewBox="0 0 64 64">
-            <path d="M54 22l-4-8a4 4 0 0 0-3.6-2.2H17.6A4 4 0 0 0 14 14l-4 8A6 6 0 0 0 6 28v8a2 2 0 0 0 2 2h2a6 6 0 0 0 12 0h20a6 6 0 0 0 12 0h2a2 2 0 0 0 2-2v-8a6 6 0 0 0-4-6zM18 40a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm28 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM12 26l3.2-6.4A2 2 0 0 1 17 18h30a2 2 0 0 1 1.8 1.6L52 26H12z" />
-          </svg>
+        {/* Image gallery */}
+        <div className="relative bg-surface-alt overflow-hidden">
+          <div className="h-72 sm:h-96 flex items-center justify-center overflow-hidden">
+            {gallery.length > 0 ? (
+              <img
+                key={activeImg}
+                src={gallery[activeImg]}
+                alt={`${car.brand.name} ${car.model} view ${activeImg + 1}`}
+                className="w-full h-full object-cover transition-opacity duration-300"
+              />
+            ) : (
+              <svg className="w-32 h-32 text-gray-300" fill="currentColor" viewBox="0 0 64 64">
+                <path d="M54 22l-4-8a4 4 0 0 0-3.6-2.2H17.6A4 4 0 0 0 14 14l-4 8A6 6 0 0 0 6 28v8a2 2 0 0 0 2 2h2a6 6 0 0 0 12 0h20a6 6 0 0 0 12 0h2a2 2 0 0 0 2-2v-8a6 6 0 0 0-4-6zM18 40a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm28 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM12 26l3.2-6.4A2 2 0 0 1 17 18h30a2 2 0 0 1 1.8 1.6L52 26H12z" />
+              </svg>
+            )}
+          </div>
+
+          {/* Prev / Next arrows */}
+          {gallery.length > 1 && (
+            <>
+              <button
+                onClick={prev}
+                className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+              >
+                ‹
+              </button>
+              <button
+                onClick={next}
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/60 text-white w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+              >
+                ›
+              </button>
+            </>
+          )}
+
+          {/* Representative image badge */}
+          {(() => {
+            const cutoffs = { City:2020,Creta:2020,i20:2020,Swift:2018,Baleno:2022,Seltos:2023,Nexon:2023,Venue:2023,Altroz:2021,Thar:2020 }
+            const cutoff = cutoffs[car.model]
+            return cutoff && car.year && car.year < cutoff ? (
+              <div className="absolute top-3 left-3 bg-black/50 text-white text-xs px-2.5 py-1 rounded-full">
+                Representative image · actual appearance may vary
+              </div>
+            ) : null
+          })()}
+
+          {/* Thumbnail strip */}
+          {gallery.length > 1 && (
+            <div className="flex gap-2 px-4 py-3 overflow-x-auto bg-white border-t border-border">
+              {gallery.map((url, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActiveImg(i)}
+                  className={`shrink-0 w-20 h-14 rounded overflow-hidden border-2 transition-colors ${
+                    i === activeImg ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100'
+                  }`}
+                >
+                  <img src={url} alt={`view ${i + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="p-6 sm:p-8">
@@ -87,6 +155,17 @@ export default function CarDetail() {
               <p className="text-xs text-muted mb-1">Ex-showroom price</p>
               <p className="text-3xl font-display font-bold text-primary">{formatLakh(car.price)}</p>
               <p className="text-sm text-muted">{formatINR(car.price)}</p>
+              <button
+                onClick={() => isInCompare(car.id) ? removeFromCompare(car.id) : addToCompare(car)}
+                disabled={compareList.length >= 3 && !isInCompare(car.id)}
+                className={`mt-3 text-sm font-medium px-4 py-2 rounded-lg border transition-colors ${
+                  isInCompare(car.id)
+                    ? 'bg-primary text-white border-primary'
+                    : 'border-border text-gray-700 hover:border-primary hover:text-primary disabled:opacity-40'
+                }`}
+              >
+                {isInCompare(car.id) ? '✓ Added to Compare' : '+ Add to Compare'}
+              </button>
             </div>
           </div>
 

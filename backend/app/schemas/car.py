@@ -1,7 +1,10 @@
 from __future__ import annotations
+
+import json
 from decimal import Decimal
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from typing import Any
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class BrandOut(BaseModel):
@@ -21,6 +24,7 @@ class CarListItem(BaseModel):
     price: Decimal | None
     mileage: Decimal | None
     seats: int | None
+    image_url: str | None = None
 
 
 class CarOut(BaseModel):
@@ -36,10 +40,22 @@ class CarOut(BaseModel):
     engine_cc: int | None
     seats: int | None
     service_cost: Decimal | None
+    image_url: str | None = None
+    gallery_images: list[str] | None = None
     view_count: int
     compare_count: int
     is_active: int
     created_at: datetime | None = None
+
+    @field_validator("gallery_images", mode="before")
+    @classmethod
+    def parse_gallery(cls, v: Any) -> list[str] | None:
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return None
+        return v
 
 
 class PaginatedCars(BaseModel):

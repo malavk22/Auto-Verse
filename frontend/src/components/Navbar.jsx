@@ -1,6 +1,9 @@
 import { Link, NavLink } from 'react-router-dom'
+import { useCompare } from '../context/CompareContext'
 
 export default function Navbar() {
+  const { compareList } = useCompare()
+
   return (
     <header className="bg-white border-b border-border sticky top-0 z-50 shadow-card">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -25,6 +28,19 @@ export default function Navbar() {
             }
           >
             Browse Cars
+          </NavLink>
+          <NavLink
+            to="/compare"
+            className={({ isActive }) =>
+              `relative text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'}`
+            }
+          >
+            Compare
+            {compareList.length > 0 && (
+              <span className="absolute -top-2 -right-3 bg-accent text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                {compareList.length}
+              </span>
+            )}
           </NavLink>
         </nav>
       </div>

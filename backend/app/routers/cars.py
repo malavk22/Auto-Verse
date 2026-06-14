@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, distinct
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, defer
 
 from app.database import get_db
 from app.models.car import Car, Brand
@@ -9,16 +11,23 @@ from app.schemas.car import CarOut, CarListItem, PaginatedCars, FilterOptions
 
 router = APIRouter(prefix="/cars", tags=["cars"])
 
+_filter_options_cache: FilterOptions | None = None
+
 
 @router.get("/filters/options", response_model=FilterOptions)
 def get_filter_options(db: Session = Depends(get_db)):
+    global _filter_options_cache
+    if _filter_options_cache is not None:
+        return _filter_options_cache
+
     brands = [r[0] for r in db.query(distinct(Brand.name)).order_by(Brand.name).all()]
     fuels = [r[0] for r in db.query(distinct(Car.fuel_type)).filter(Car.fuel_type.isnot(None)).order_by(Car.fuel_type).all()]
     transmissions = [r[0] for r in db.query(distinct(Car.transmission)).filter(Car.transmission.isnot(None)).order_by(Car.transmission).all()]
     seats = sorted([r[0] for r in db.query(distinct(Car.seats)).filter(Car.seats.isnot(None)).all()])
     min_price = db.query(func.min(Car.price)).scalar()
     max_price = db.query(func.max(Car.price)).scalar()
-    return FilterOptions(
+
+    _filter_options_cache = FilterOptions(
         brands=brands,
         fuel_types=fuels,
         transmissions=transmissions,
@@ -26,11 +35,31 @@ def get_filter_options(db: Session = Depends(get_db)):
         min_price=min_price,
         max_price=max_price,
     )
+    return _filter_options_cache
 
 
 @router.get("/brands", response_model=list[str])
 def get_brands(db: Session = Depends(get_db)):
     return [r[0] for r in db.query(distinct(Brand.name)).order_by(Brand.name).all()]
+
+
+@router.get("/compare", response_model=list[CarOut])
+def compare_cars(ids: str = Query(..., description="Comma-separated car IDs, max 3"), db: Session = Depends(get_db)):
+    id_list = [int(i) for i in ids.split(",") if i.strip().isdigit()][:3]
+    if not id_list:
+        raise HTTPException(status_code=400, detail="Provide at least one valid car ID")
+    cars = (
+        db.query(Car)
+        .options(joinedload(Car.brand))
+        .filter(Car.id.in_(id_list), Car.is_active == 1)
+        .all()
+    )
+    for car in cars:
+        car.compare_count += 1
+    db.commit()
+    for car in cars:
+        db.refresh(car)
+    return cars
 
 
 @router.get("/{car_id}", response_model=CarOut)
@@ -64,7 +93,7 @@ def list_cars(
 ):
     query = (
         db.query(Car)
-        .options(joinedload(Car.brand))
+        .options(joinedload(Car.brand), defer(Car.gallery_images))
         .join(Car.brand)
         .filter(Car.is_active == 1)
     )
