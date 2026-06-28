@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -20,11 +20,21 @@ def ownership_cost(req: OwnershipRequest, db: Session = Depends(get_db)):
     )
     if not car:
         raise HTTPException(status_code=404, detail="Car not found")
-    return calculate_ownership(car, req.years, req.annual_km, req.fuel_price)
+    return calculate_ownership(
+        car, req.years, req.annual_km, req.fuel_price,
+        req.condition, req.accident_history, req.multiple_owners, req.no_service_records,
+    )
 
 
 @router.get("/depreciation/{car_id}", response_model=DepreciationResult)
-def depreciation(car_id: int, db: Session = Depends(get_db)):
+def depreciation(
+    car_id: int,
+    condition: str = Query("good"),
+    accident_history: bool = Query(False),
+    multiple_owners: bool = Query(False),
+    no_service_records: bool = Query(False),
+    db: Session = Depends(get_db),
+):
     car = (
         db.query(Car)
         .options(joinedload(Car.brand))
@@ -33,4 +43,4 @@ def depreciation(car_id: int, db: Session = Depends(get_db)):
     )
     if not car:
         raise HTTPException(status_code=404, detail="Car not found")
-    return calculate_depreciation(car)
+    return calculate_depreciation(car, condition, accident_history, multiple_owners, no_service_records)

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getCar } from '../api/cars'
 import { formatLakh, formatINR } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
@@ -24,6 +24,7 @@ function SpecRow({ label, value }) {
 
 export default function CarDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [car, setCar] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -155,17 +156,25 @@ export default function CarDetail() {
               <p className="text-xs text-muted mb-1">Ex-showroom price</p>
               <p className="text-3xl font-display font-bold text-primary">{formatLakh(car.price)}</p>
               <p className="text-sm text-muted">{formatINR(car.price)}</p>
-              <button
-                onClick={() => isInCompare(car.id) ? removeFromCompare(car.id) : addToCompare(car)}
-                disabled={compareList.length >= 3 && !isInCompare(car.id)}
-                className={`mt-3 text-sm font-medium px-4 py-2 rounded-lg border transition-colors ${
-                  isInCompare(car.id)
-                    ? 'bg-primary text-white border-primary'
-                    : 'border-border text-gray-700 hover:border-primary hover:text-primary disabled:opacity-40'
-                }`}
-              >
-                {isInCompare(car.id) ? '✓ Added to Compare' : '+ Add to Compare'}
-              </button>
+              <div className="flex flex-col gap-2 mt-3">
+                <button
+                  onClick={() => isInCompare(car.id) ? removeFromCompare(car.id) : addToCompare(car)}
+                  disabled={compareList.length >= 3 && !isInCompare(car.id)}
+                  className={`text-sm font-medium px-4 py-2 rounded-lg border transition-colors ${
+                    isInCompare(car.id)
+                      ? 'bg-primary text-white border-primary'
+                      : 'border-border text-gray-700 hover:border-primary hover:text-primary disabled:opacity-40'
+                  }`}
+                >
+                  {isInCompare(car.id) ? '✓ Added to Compare' : '+ Add to Compare'}
+                </button>
+                <button
+                  onClick={() => navigate(`/calculator?car_id=${car.id}`)}
+                  className="text-sm font-medium px-4 py-2 rounded-lg border border-accent text-accent hover:bg-accent hover:text-white transition-colors"
+                >
+                  Calculate Ownership Cost
+                </button>
+              </div>
             </div>
           </div>
 

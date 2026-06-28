@@ -42,6 +42,14 @@ export default function Navbar() {
               </span>
             )}
           </NavLink>
+          <NavLink
+            to="/calculator"
+            className={({ isActive }) =>
+              `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'}`
+            }
+          >
+            Calculator
+          </NavLink>
         </nav>
       </div>
     </header>

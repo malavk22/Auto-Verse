@@ -72,3 +72,52 @@ class FilterOptions(BaseModel):
     seat_options: list[int]
     min_price: Decimal | None
     max_price: Decimal | None
+
+
+# ── Ownership Calculator ──────────────────────────────────────────────────────
+
+class OwnershipRequest(BaseModel):
+    car_id: int
+    years: int = 5
+    annual_km: int = 15000
+    fuel_price: Decimal = Decimal("103")
+    condition: str = "good"
+    accident_history: bool = False
+    multiple_owners: bool = False
+    no_service_records: bool = False
+
+
+class OwnershipResult(BaseModel):
+    car_id: int
+    brand: str
+    model: str
+    ex_showroom_price: Decimal
+    annual_fuel_cost: Decimal
+    annual_insurance: Decimal
+    annual_maintenance: Decimal
+    total_depreciation: Decimal
+    total_ownership_cost: Decimal
+    cost_per_year: Decimal
+    cost_per_km: Decimal
+    condition: str
+    condition_multiplier: Decimal
+    standard_resale_value: Decimal
+    adjusted_resale_value: Decimal
+
+
+# ── Depreciation ─────────────────────────────────────────────────────────────
+
+class DepreciationEntry(BaseModel):
+    year: int
+    percentage: int
+    value: Decimal
+    adjusted_value: Decimal
+
+
+class DepreciationResult(BaseModel):
+    car_id: int
+    brand: str
+    model: str
+    purchase_price: Decimal
+    condition_multiplier: Decimal
+    schedule: list[DepreciationEntry]

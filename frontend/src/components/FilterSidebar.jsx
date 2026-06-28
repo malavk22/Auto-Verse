@@ -1,30 +1,56 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { formatLakh } from '../utils/formatCurrency'
 
 function CustomSelect({ value, onChange, options, placeholder }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef(null)
+  const [rect, setRect] = useState(null)
+  const buttonRef = useRef(null)
+  const dropdownRef = useRef(null)
 
+  // Close on outside click
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    if (!open) return
+    const handler = (e) => {
+      if (
+        !buttonRef.current?.contains(e.target) &&
+        !dropdownRef.current?.contains(e.target)
+      ) setOpen(false)
+    }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [])
+  }, [open])
+
+  // Close on scroll so the portal doesn't drift
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    window.addEventListener('scroll', close, true)
+    return () => window.removeEventListener('scroll', close, true)
+  }, [open])
+
+  const toggle = () => {
+    if (!open && buttonRef.current) {
+      setRect(buttonRef.current.getBoundingClientRect())
+    }
+    setOpen(o => !o)
+  }
 
   const selected = options.find(o => o.value === value)
 
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen(o => !o)}
-        className={`w-full flex items-center justify-between gap-2 text-sm px-3 py-2 rounded-lg border transition-colors ${
+        onClick={toggle}
+        className={`w-full flex items-center justify-between gap-2 text-sm px-3 py-2.5 rounded-lg border transition-all ${
           open
             ? 'border-primary ring-2 ring-primary/20 bg-white'
-            : 'border-border bg-white hover:border-primary/60'
+            : 'border-border bg-white hover:border-primary/60 hover:shadow-sm'
         }`}
       >
-        <span className={selected ? 'text-gray-900 font-medium' : 'text-muted'}>
+        <span className={selected?.value !== '' && selected ? 'text-gray-900 font-medium' : 'text-muted'}>
           {selected ? selected.label : placeholder}
         </span>
         <svg
@@ -35,30 +61,42 @@ function CustomSelect({ value, onChange, options, placeholder }) {
         </svg>
       </button>
 
-      {open && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-border rounded-lg shadow-lg overflow-hidden">
+      {open && rect && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: rect.bottom + 4,
+            left: rect.left,
+            width: rect.width,
+            zIndex: 9999,
+            maxHeight: '240px',
+          }}
+          className="bg-white border border-border rounded-lg shadow-lg overflow-y-auto"
+        >
           {options.map(o => (
             <button
               key={o.value}
               type="button"
               onClick={() => { onChange(o.value); setOpen(false) }}
-              className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors text-left ${
+              className={`w-full flex items-center justify-between px-3 py-2.5 text-sm transition-colors text-left ${
                 o.value === value
-                  ? 'bg-primary/5 text-primary font-medium'
+                  ? 'bg-primary/8 text-primary font-semibold'
                   : 'text-gray-700 hover:bg-surface-alt'
               }`}
             >
-              {o.label}
+              <span>{o.label}</span>
               {o.value === value && (
-                <svg className="w-4 h-4 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg className="w-3.5 h-3.5 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               )}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   )
 }
 
@@ -72,14 +110,32 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
 
   const seatOptions = [
     { value: '', label: 'Any' },
-    ...(options.seat_options?.map(s => ({ value: s, label: `${s}+ seats` })) || []),
+    ...(options.seat_options?.map(s => ({ value: String(s), label: `${s}+ seats` })) || []),
   ]
 
+  const activeCount = [
+    filters.brand, filters.fuel_type, filters.transmission,
+    filters.seats, filters.max_price,
+  ].filter(Boolean).length
+
   return (
-    <aside className="w-64 shrink-0 bg-white rounded-lg shadow-card p-5 h-fit sticky top-20">
+    <aside className="w-64 shrink-0 bg-white rounded-xl shadow-card p-5 h-fit sticky top-20 self-start">
       <div className="flex items-center justify-between mb-5">
-        <h2 className="font-display font-semibold text-gray-900">Filters</h2>
-        <button onClick={onReset} className="text-xs text-primary hover:underline">Reset</button>
+        <div className="flex items-center gap-2">
+          <h2 className="font-display font-semibold text-gray-900 text-sm">Filters</h2>
+          {activeCount > 0 && (
+            <span className="bg-primary text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+              {activeCount}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={onReset}
+          className="text-xs text-primary hover:underline disabled:text-gray-300"
+          disabled={activeCount === 0}
+        >
+          Reset all
+        </button>
       </div>
 
       {/* Brand */}
@@ -94,15 +150,15 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
 
       {/* Fuel type */}
       <FilterSection label="Fuel Type">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {options.fuel_types?.map(f => (
             <button
               key={f}
               onClick={() => handleChange('fuel_type', filters.fuel_type === f ? undefined : f)}
-              className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+              className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
                 filters.fuel_type === f
-                  ? 'bg-primary text-white border-primary'
-                  : 'border-border text-muted hover:border-primary hover:text-primary'
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'border-border text-gray-600 hover:border-primary hover:text-primary bg-white'
               }`}
             >
               {f}
@@ -118,10 +174,10 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
             <button
               key={t}
               onClick={() => handleChange('transmission', filters.transmission === t ? undefined : t)}
-              className={`flex-1 text-xs px-3 py-1.5 rounded border transition-colors ${
+              className={`flex-1 text-xs px-3 py-2 rounded-lg border font-medium transition-all ${
                 filters.transmission === t
-                  ? 'bg-primary text-white border-primary'
-                  : 'border-border text-muted hover:border-primary hover:text-primary'
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'border-border text-gray-600 hover:border-primary hover:text-primary bg-white'
               }`}
             >
               {t}
@@ -133,7 +189,7 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
       {/* Seats */}
       <FilterSection label="Min Seats">
         <CustomSelect
-          value={filters.seats || ''}
+          value={filters.seats ? String(filters.seats) : ''}
           onChange={v => handleChange('seats', v ? Number(v) : undefined)}
           options={seatOptions}
           placeholder="Any"
@@ -142,18 +198,21 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
 
       {/* Price range */}
       <FilterSection label="Max Price">
-        <input
-          type="range"
-          min={options.min_price || 0}
-          max={options.max_price || 5000000}
-          step={100000}
-          value={filters.max_price || options.max_price || 5000000}
-          onChange={e => handleChange('max_price', Number(e.target.value))}
-          className="w-full accent-primary"
-        />
-        <p className="text-xs text-muted mt-1 text-right">
-          Up to {formatLakh(filters.max_price || options.max_price)}
-        </p>
+        <div className="px-1">
+          <input
+            type="range"
+            min={options.min_price || 0}
+            max={options.max_price || 5000000}
+            step={100000}
+            value={filters.max_price || options.max_price || 5000000}
+            onChange={e => handleChange('max_price', Number(e.target.value))}
+            className="w-full accent-primary cursor-pointer"
+          />
+        </div>
+        <div className="flex justify-between text-xs text-muted mt-1">
+          <span>{formatLakh(options.min_price || 0)}</span>
+          <span className="font-semibold text-primary">{formatLakh(filters.max_price || options.max_price)}</span>
+        </div>
       </FilterSection>
 
       {/* Sort */}
@@ -161,7 +220,7 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
         <select
           value={filters.sort || 'price_asc'}
           onChange={e => handleChange('sort', e.target.value)}
-          className="w-full text-sm border border-border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          className="w-full text-sm border border-border rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-gray-700"
         >
           <option value="price_asc">Price: Low to High</option>
           <option value="price_desc">Price: High to Low</option>
@@ -176,7 +235,7 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
 function FilterSection({ label, children }) {
   return (
     <div className="mb-5 pb-5 border-b border-border last:border-0 last:mb-0 last:pb-0">
-      <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">{label}</p>
+      <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">{label}</p>
       {children}
     </div>
   )
