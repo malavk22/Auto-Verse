@@ -2,7 +2,7 @@ from decimal import Decimal
 
 DEPRECIATION_RATES = [
     (0, 100), (1, 85), (2, 75), (3, 65), (4, 55),
-    (5, 50),  (6, 45), (7, 40), (8, 35),
+    (5, 50),  (6, 45), (7, 40), (8, 35), (9, 30), (10, 25),
 ]
 
 CONDITION_MULTIPLIERS = {

@@ -8,8 +8,8 @@ CONDITION_MULTIPLIERS = {
     "damaged":   Decimal("0.50"),
 }
 
-# IRDAI retained value % at each year
-IRDAI_RATES = {0: 100, 1: 85, 2: 75, 3: 65, 4: 55, 5: 50, 6: 45, 7: 40, 8: 35}
+# IRDAI retained value % at each year (years 9-10 extrapolated at −5%/yr)
+IRDAI_RATES = {0: 100, 1: 85, 2: 75, 3: 65, 4: 55, 5: 50, 6: 45, 7: 40, 8: 35, 9: 30, 10: 25}
 
 
 def _condition_multiplier(condition, accident_history, multiple_owners, no_service_records):
@@ -37,21 +37,17 @@ def calculate_ownership(
     annual_insurance = price * Decimal("0.025")
     annual_maintenance = Decimal(str(car.service_cost)) if car.service_cost else Decimal("10000")
 
-    # Standard depreciation (15% yr1, 10% subsequent)
-    dep_year1 = price * Decimal("0.15")
-    dep_subsequent = price * Decimal("0.10") * (years - 1) if years > 1 else Decimal("0")
-    total_depreciation = dep_year1 + dep_subsequent
+    # Depreciation via IRDAI retained-value table (avoids overflow beyond year 8)
+    cond_mult = _condition_multiplier(condition, accident_history, multiple_owners, no_service_records)
+    yr_key = min(years, 10)
+    irdai_pct = Decimal(str(IRDAI_RATES.get(yr_key, 25))) / Decimal("100")
+    standard_resale = price * irdai_pct
+    adjusted_resale = standard_resale * cond_mult
+    total_depreciation = price - standard_resale
 
     total_ownership = (annual_fuel + annual_insurance + annual_maintenance) * years + total_depreciation
     cost_per_year = total_ownership / years if years else Decimal("0")
     cost_per_km = total_ownership / (Decimal(str(annual_km)) * years) if annual_km and years else Decimal("0")
-
-    # Condition-adjusted resale value (IRDAI base × condition multiplier)
-    cond_mult = _condition_multiplier(condition, accident_history, multiple_owners, no_service_records)
-    yr_key = min(years, 8)
-    irdai_pct = Decimal(str(IRDAI_RATES.get(yr_key, 35))) / Decimal("100")
-    standard_resale = price * irdai_pct
-    adjusted_resale = standard_resale * cond_mult
 
     return {
         "car_id": car.id,

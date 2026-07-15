@@ -121,3 +121,37 @@ class DepreciationResult(BaseModel):
     purchase_price: Decimal
     condition_multiplier: Decimal
     schedule: list[DepreciationEntry]
+
+
+# ── Recommendations ───────────────────────────────────────────────────────────
+
+class RecommendRequest(BaseModel):
+    budget: Decimal
+    fuel_type: str | None = None
+    seats: int | None = None
+    transmission: str | None = None
+    priority: str | None = None       # "efficiency" | "low_maintenance"
+    use_case: str | None = None       # "city" | "highway" | "family" | "first_car"
+    year_preference: str | None = None  # "2020" | "2022"
+    top_n: int = 6
+
+
+class RecommendCarItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    brand: BrandOut
+    model: str
+    year: int | None
+    fuel_type: str | None
+    transmission: str | None
+    price: Decimal | None
+    mileage: Decimal | None
+    seats: int | None
+    service_cost: Decimal | None
+    image_url: str | None = None
+
+
+class RecommendResult(BaseModel):
+    car: RecommendCarItem
+    score: int
+    reasons: list[str]
