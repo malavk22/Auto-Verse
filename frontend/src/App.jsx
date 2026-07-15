@@ -6,6 +6,7 @@ import CarListing from './pages/CarListing'
 import CarDetail from './pages/CarDetail'
 import Compare from './pages/Compare'
 import OwnershipCalculator from './pages/OwnershipCalculator'
+import Recommendations from './pages/Recommendations'
 import NotFound from './pages/NotFound'
 import { CompareProvider } from './context/CompareContext'
 
@@ -21,6 +22,7 @@ export default function App() {
             <Route path="/cars/:id" element={<CarDetail />} />
             <Route path="/compare" element={<Compare />} />
             <Route path="/calculator" element={<OwnershipCalculator />} />
+            <Route path="/recommendations" element={<Recommendations />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

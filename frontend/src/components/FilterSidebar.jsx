@@ -21,10 +21,13 @@ function CustomSelect({ value, onChange, options, placeholder }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  // Close on scroll so the portal doesn't drift
+  // Close on scroll so the portal doesn't drift — but NOT when scrolling inside the dropdown itself
   useEffect(() => {
     if (!open) return
-    const close = () => setOpen(false)
+    const close = (e) => {
+      if (dropdownRef.current?.contains(e.target)) return
+      setOpen(false)
+    }
     window.addEventListener('scroll', close, true)
     return () => window.removeEventListener('scroll', close, true)
   }, [open])
@@ -115,11 +118,12 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
 
   const activeCount = [
     filters.brand, filters.fuel_type, filters.transmission,
-    filters.seats, filters.max_price,
+    filters.seats, filters.min_price,
   ].filter(Boolean).length
 
   return (
-    <aside className="w-64 shrink-0 bg-white rounded-xl shadow-card p-5 h-fit sticky top-20 self-start">
+    <div className="w-64 shrink-0 sticky top-20 self-start h-[calc(100vh-5.5rem)]">
+    <aside className="h-full overflow-y-auto bg-white rounded-xl shadow-card p-5">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <h2 className="font-display font-semibold text-gray-900 text-sm">Filters</h2>
@@ -196,29 +200,40 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
         />
       </FilterSection>
 
-      {/* Price range */}
-      <FilterSection label="Max Price">
+      {/* Price — starting from */}
+      <FilterSection label="Starting Price">
         <div className="px-1">
           <input
             type="range"
             min={options.min_price || 0}
-            max={options.max_price || 5000000}
+            max={options.max_price || 6600000}
             step={100000}
-            value={filters.max_price || options.max_price || 5000000}
-            onChange={e => handleChange('max_price', Number(e.target.value))}
+            value={filters.min_price || options.min_price || 0}
+            onChange={e => {
+              const val = Number(e.target.value)
+              onChange({
+                ...filters,
+                min_price: val <= (options.min_price || 0) ? undefined : val,
+                max_price: undefined,
+                sort: 'price_asc',
+                page: 1,
+              })
+            }}
             className="w-full accent-primary cursor-pointer"
           />
         </div>
         <div className="flex justify-between text-xs text-muted mt-1">
           <span>{formatLakh(options.min_price || 0)}</span>
-          <span className="font-semibold text-primary">{formatLakh(filters.max_price || options.max_price)}</span>
+          <span className="font-semibold text-primary">
+            {filters.min_price ? `From ${formatLakh(filters.min_price)}` : 'Any'}
+          </span>
         </div>
       </FilterSection>
 
       {/* Sort */}
       <FilterSection label="Sort By">
         <select
-          value={filters.sort || 'price_asc'}
+          value={filters.sort || 'year_desc'}
           onChange={e => handleChange('sort', e.target.value)}
           className="w-full text-sm border border-border rounded-lg px-3 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-gray-700"
         >
@@ -229,6 +244,7 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
         </select>
       </FilterSection>
     </aside>
+    </div>
   )
 }
 

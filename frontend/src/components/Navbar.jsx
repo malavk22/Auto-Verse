@@ -50,6 +50,14 @@ export default function Navbar() {
           >
             Calculator
           </NavLink>
+          <NavLink
+            to="/recommendations"
+            className={({ isActive }) =>
+              `text-sm font-medium transition-colors ${isActive ? 'text-primary' : 'text-gray-600 hover:text-primary'}`
+            }
+          >
+            Recommend
+          </NavLink>
         </nav>
       </div>
     </header>

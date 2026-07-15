@@ -4,7 +4,7 @@ import { getCars, getFilterOptions } from '../api/cars'
 import CarCard from '../components/CarCard'
 import FilterSidebar from '../components/FilterSidebar'
 
-const DEFAULT_FILTERS = { sort: 'price_asc', page: 1, limit: 20 }
+const DEFAULT_FILTERS = { sort: 'year_desc', page: 1, limit: 20 }
 
 export default function CarListing() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -19,7 +19,7 @@ export default function CarListing() {
     if (searchParams.get('fuel_type')) f.fuel_type = searchParams.get('fuel_type')
     if (searchParams.get('transmission')) f.transmission = searchParams.get('transmission')
     if (searchParams.get('seats')) f.seats = Number(searchParams.get('seats'))
-    if (searchParams.get('max_price')) f.max_price = Number(searchParams.get('max_price'))
+    if (searchParams.get('min_price')) f.min_price = Number(searchParams.get('min_price'))
     if (searchParams.get('sort')) f.sort = searchParams.get('sort')
     if (searchParams.get('page')) f.page = Number(searchParams.get('page'))
     return f

@@ -5,6 +5,76 @@ import { compareCars } from '../api/cars'
 import { formatINR, formatLakh } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
 
+const MEDALS = ['🥇', '🥈', '🥉']
+
+const BADGES = [
+  { icon: '💰', label: 'Most Affordable',    compare: 'lower',  raw: c => Number(c.price) },
+  { icon: '⛽', label: 'Best Mileage',       compare: 'higher', raw: c => Number(c.mileage) },
+  { icon: '🔧', label: 'Lowest Maintenance', compare: 'lower',  raw: c => Number(c.service_cost) },
+  { icon: '💪', label: 'Most Powerful',      compare: 'higher', raw: c => c.engine_cc },
+  { icon: '🪑', label: 'Most Spacious',      compare: 'higher', raw: c => c.seats },
+  { icon: '📅', label: 'Most Recent',        compare: 'higher', raw: c => c.year },
+]
+
+function computeWinner(cars) {
+  if (cars.length < 2) return null
+
+  const wins    = Object.fromEntries(cars.map(c => [c.id, 0]))
+  const badges  = Object.fromEntries(cars.map(c => [c.id, []]))
+  const totalComparable = SPECS.filter(s => s.compare && s.raw).length
+
+  // Count spec wins
+  SPECS.filter(s => s.compare && s.raw).forEach(spec => {
+    const vals = cars
+      .map(c => ({ id: c.id, v: spec.raw(c) }))
+      .filter(x => x.v != null && !isNaN(x.v))
+    if (vals.length < 2) return
+    const best = spec.compare === 'higher' ? Math.max(...vals.map(x => x.v)) : Math.min(...vals.map(x => x.v))
+    const top  = vals.filter(x => x.v === best)
+    if (top.length === 1) wins[top[0].id]++
+  })
+
+  // Assign specialty badges (unique winner only)
+  BADGES.forEach(badge => {
+    const vals = cars
+      .map(c => ({ id: c.id, v: badge.raw(c) }))
+      .filter(x => x.v != null && !isNaN(x.v) && x.v > 0)
+    if (vals.length < 2) return
+    const best = badge.compare === 'higher' ? Math.max(...vals.map(x => x.v)) : Math.min(...vals.map(x => x.v))
+    const top  = vals.filter(x => x.v === best)
+    if (top.length === 1) badges[top[0].id].push({ icon: badge.icon, label: badge.label })
+  })
+
+  // Rank: most wins first, tiebreak by price (cheaper = better)
+  const ranked = [...cars].sort((a, b) => {
+    const d = wins[b.id] - wins[a.id]
+    return d !== 0 ? d : Number(a.price) - Number(b.price)
+  })
+
+  const isTied  = wins[ranked[0].id] === wins[ranked[1]?.id]
+  const winner  = ranked[0]
+
+  // Reasons: specs where winner has the unique best value, with competitor values for context
+  const reasons = SPECS.filter(s => s.compare && s.raw).reduce((acc, spec) => {
+    const vals = cars
+      .map(c => ({ id: c.id, v: spec.raw(c), rendered: spec.render(c) }))
+      .filter(x => x.v != null && !isNaN(x.v))
+    if (vals.length < 2) return acc
+    const best = spec.compare === 'higher' ? Math.max(...vals.map(x => x.v)) : Math.min(...vals.map(x => x.v))
+    const top  = vals.filter(x => x.v === best)
+    if (top.length === 1 && top[0].id === winner.id) {
+      acc.push({
+        label:  spec.label,
+        value:  top[0].rendered,
+        others: vals.filter(x => x.id !== winner.id).map(x => x.rendered),
+      })
+    }
+    return acc
+  }, [])
+
+  return { wins, badges, ranked, totalComparable, isTied, reasons }
+}
+
 const SPECS = [
   { label: 'Brand',          render: c => c.brand.name,                                   compare: null },
   { label: 'Model',          render: c => c.model,                                         compare: null },
@@ -89,11 +159,11 @@ export default function Compare() {
                 <th key={car.id} className="pb-6 px-3 min-w-[200px]">
                   <div className="bg-white rounded-xl shadow-card overflow-hidden">
                     <div className="h-40 bg-surface-alt flex items-center justify-center overflow-hidden">
-                      {brandImages[car.brand.name] ? (
+                      {(car.image_url || brandImages[car.brand.name]) ? (
                         <img
-                          src={brandImages[car.brand.name]}
-                          alt={car.brand.name}
-                          className="w-full h-full object-contain p-3"
+                          src={car.image_url || brandImages[car.brand.name]}
+                          alt={`${car.brand.name} ${car.model}`}
+                          className="w-full h-full object-cover"
                         />
                       ) : (
                         <svg className="w-16 h-16 text-gray-300" fill="currentColor" viewBox="0 0 64 64">
@@ -152,6 +222,136 @@ export default function Compare() {
           )}
         </div>
       )}
+
+      {/* Winner Section */}
+      {cars.length > 1 && (() => {
+        const result = computeWinner(cars)
+        if (!result) return null
+        const { wins, badges, ranked, totalComparable, isTied, reasons } = result
+        const winner = ranked[0]
+
+        return (
+          <div className="mt-10 bg-white rounded-2xl shadow-card overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-teal-600 to-teal-500 px-6 py-4 flex items-center gap-3">
+              <span className="text-2xl">🏆</span>
+              <div>
+                <p className="text-white font-display font-bold text-lg leading-tight">Overall Winner</p>
+                <p className="text-teal-100 text-xs mt-0.5">Based on head-to-head spec comparison</p>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Winner highlight card */}
+              <div className="flex gap-5 bg-teal-50 border border-teal-200 rounded-xl p-5 mb-6">
+                <div className="w-36 h-24 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                  {(winner.image_url || brandImages[winner.brand.name]) ? (
+                    <img
+                      src={winner.image_url || brandImages[winner.brand.name]}
+                      alt={winner.model}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-2xl">🚗</div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-xs text-teal-600 font-semibold uppercase tracking-wider">{winner.brand.name}</p>
+                      <p className="font-display font-bold text-gray-900 text-2xl leading-tight">{winner.model}</p>
+                    </div>
+                    <span className="text-3xl shrink-0">🥇</span>
+                  </div>
+                  <p className="font-display font-bold text-teal-700 text-lg mt-1">{formatLakh(winner.price)}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leads in <span className="font-semibold text-teal-700">{wins[winner.id]}</span> of {totalComparable} comparable specs
+                    {isTied && ' · wins tie on price'}
+                  </p>
+                  {badges[winner.id].length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2.5">
+                      {badges[winner.id].map((b, j) => (
+                        <span
+                          key={j}
+                          className="inline-flex items-center gap-1 text-xs bg-teal-100 border border-teal-200 text-teal-800 font-medium px-2.5 py-1 rounded-full"
+                        >
+                          {b.icon} {b.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Why it wins */}
+                  {reasons.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-teal-200">
+                      <p className="text-[10px] font-bold text-teal-600 uppercase tracking-widest mb-2">Why it wins</p>
+                      <div className="space-y-1.5">
+                        {reasons.map((r, j) => (
+                          <div key={j} className="flex items-baseline gap-2 text-sm">
+                            <span className="text-xs text-gray-400 w-24 shrink-0">{r.label}</span>
+                            <span className="font-semibold text-teal-800">{r.value}</span>
+                            <span className="text-xs text-gray-400">vs {r.others.join(' · ')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <Link
+                    to={`/cars/${winner.id}`}
+                    className="inline-block mt-4 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 px-4 py-1.5 rounded-lg transition-colors"
+                  >
+                    View {winner.model} →
+                  </Link>
+                </div>
+              </div>
+
+              {/* All cars ranked */}
+              <div className={`grid gap-4 ${cars.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                {ranked.map((car, i) => (
+                  <div
+                    key={car.id}
+                    className={`rounded-xl p-4 border ${
+                      i === 0
+                        ? 'border-teal-300 bg-teal-50'
+                        : 'border-border bg-surface-alt'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2 mb-2">
+                      <span className="text-xl shrink-0">{MEDALS[i]}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] text-muted truncate">{car.brand.name}</p>
+                        <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{car.model}</p>
+                      </div>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                        i === 0 ? 'bg-teal-600 text-white' : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        {wins[car.id]}W
+                      </span>
+                    </div>
+
+                    {/* Specialty badges */}
+                    {badges[car.id].length > 0 ? (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {badges[car.id].map((b, j) => (
+                          <span
+                            key={j}
+                            className="inline-flex items-center gap-0.5 text-[10px] bg-white border border-border px-1.5 py-0.5 rounded-full text-gray-600 font-medium"
+                          >
+                            {b.icon} {b.label}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-muted mt-2">No category wins</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

@@ -66,7 +66,10 @@ function CustomSelect({ value, onChange, options, placeholder, disabled }) {
 
   useEffect(() => {
     if (!open) return
-    const close = () => setOpen(false)
+    const close = (e) => {
+      if (dropdownRef.current?.contains(e.target)) return
+      setOpen(false)
+    }
     window.addEventListener('scroll', close, true)
     return () => window.removeEventListener('scroll', close, true)
   }, [open])
@@ -129,9 +132,16 @@ function CustomSelect({ value, onChange, options, placeholder, disabled }) {
   )
 }
 
-// ── Status bar slider ─────────────────────────────────────────────────────────
-function StatusBar({ label, icon, min, max, step, value, onChange, format, color = 'bg-primary' }) {
-  const pct = Math.round(((value - min) / (max - min)) * 100)
+// ── Status bar slider with manual input ──────────────────────────────────────
+function StatusBar({ label, icon, min, max, step, value, onChange, format, unit, color = 'bg-primary' }) {
+  const pct = Math.round(((Math.min(value, max) - min) / (max - min)) * 100)
+
+  const handleInput = (raw) => {
+    const v = Number(raw)
+    if (isNaN(v) || raw === '') return
+    onChange(Math.min(max, Math.max(min, v)))
+  }
+
   return (
     <div className="bg-gray-50 rounded-xl p-4 border border-border">
       <div className="flex items-center justify-between mb-3">
@@ -139,13 +149,25 @@ function StatusBar({ label, icon, min, max, step, value, onChange, format, color
           <span className="text-base">{icon}</span>
           <span className="text-sm font-semibold text-gray-700">{label}</span>
         </div>
-        <span className="text-sm font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">{format(value)}</span>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={e => handleInput(e.target.value)}
+            onBlur={e => handleInput(e.target.value)}
+            className="w-24 text-sm font-bold text-primary text-center bg-primary/10 border border-primary/20 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white"
+          />
+          {unit && <span className="text-xs text-muted">{unit}</span>}
+        </div>
       </div>
       <div className="relative h-3 bg-gray-200 rounded-full overflow-hidden mb-2">
         <div className={`absolute left-0 top-0 h-full ${color} rounded-full transition-all duration-150`} style={{ width: `${pct}%` }} />
       </div>
       <input
-        type="range" min={min} max={max} step={step} value={value}
+        type="range" min={min} max={max} step={step} value={Math.min(value, max)}
         onChange={e => onChange(Number(e.target.value))}
         className="w-full h-3 opacity-0 cursor-pointer block -mt-5"
       />
@@ -357,8 +379,8 @@ export default function OwnershipCalculator() {
         </div>
 
         <div className="space-y-4">
-          <StatusBar label="Years of Ownership" icon="📅" min={1} max={10} step={1} value={years} onChange={setYears} format={v => `${v} yr${v > 1 ? 's' : ''}`} color="bg-primary" />
-          <StatusBar label="Annual Distance" icon="🛣️" min={5000} max={50000} step={1000} value={annualKm} onChange={setAnnualKm} format={v => `${(v / 1000).toFixed(0)}k km`} color="bg-accent" />
+          <StatusBar label="Years of Ownership" icon="📅" min={1} max={10} step={1} value={years} onChange={setYears} format={v => `${v} yr${v > 1 ? 's' : ''}`} unit="yrs" color="bg-primary" />
+          <StatusBar label="Annual Distance" icon="🛣️" min={5000} max={100000} step={1000} value={annualKm} onChange={setAnnualKm} format={v => `${(v / 1000).toFixed(0)}k km`} unit="km/yr" color="bg-accent" />
 
           <div className="bg-gray-50 rounded-xl p-4 border border-border">
             <div className="flex items-center justify-between mb-3">
