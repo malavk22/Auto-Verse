@@ -117,10 +117,41 @@ def list_cars(
         "mileage_desc": Car.mileage.desc(),
         "year_desc": Car.year.desc(),
     }
-    order = sort_map.get(sort, Car.price.asc())
+    order = sort_map.get(sort, Car.year.desc())
     query = query.order_by(order)
 
-    total = query.count()
-    items = query.offset((page - 1) * limit).limit(limit).all()
+    # Group all matching cars by (brand_id, model) and pick best per group
+    from collections import defaultdict
+    all_cars = query.all()
+    groups: dict = defaultdict(list)
+    for car in all_cars:
+        groups[(car.brand_id, car.model)].append(car)
+
+    def best_car(cars):
+        if sort == "price_asc":
+            valid = [c for c in cars if c.price is not None]
+            return min(valid, key=lambda c: float(c.price)) if valid else cars[0]
+        if sort == "price_desc":
+            valid = [c for c in cars if c.price is not None]
+            return max(valid, key=lambda c: float(c.price)) if valid else cars[0]
+        if sort == "mileage_desc":
+            valid = [c for c in cars if c.mileage is not None]
+            return max(valid, key=lambda c: float(c.mileage)) if valid else cars[0]
+        # year_desc default
+        valid = [c for c in cars if c.year is not None]
+        return max(valid, key=lambda c: c.year) if valid else cars[0]
+
+    unique = [best_car(g) for g in groups.values()]
+
+    sort_key_map = {
+        "price_asc":    lambda c: (c.price   is None,  float(c.price   or 0)),
+        "price_desc":   lambda c: (c.price   is None, -float(c.price   or 0)),
+        "mileage_desc": lambda c: (c.mileage is None, -float(c.mileage or 0), float(c.price or 0)),
+        "year_desc":    lambda c: (c.year    is None, -(c.year         or 0),  float(c.price or 0)),
+    }
+    unique.sort(key=sort_key_map.get(sort, sort_key_map["year_desc"]))
+
+    total = len(unique)
+    items = unique[(page - 1) * limit : page * limit]
 
     return PaginatedCars(total=total, page=page, page_size=limit, items=items)

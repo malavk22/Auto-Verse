@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import cars, calculators
+from app.routers import cars, calculators, recommendations
 
 app = FastAPI(title="AutoVerse API", version="1.0.0")
 
@@ -14,6 +14,7 @@ app.add_middleware(
 
 app.include_router(cars.router, prefix="/api/v1")
 app.include_router(calculators.router, prefix="/api/v1")
+app.include_router(recommendations.router, prefix="/api/v1")
 
 
 @app.get("/")
