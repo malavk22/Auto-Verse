@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { getCar } from '../api/cars'
+import { getCar, getCars } from '../api/cars'
 import { formatLakh, formatINR } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
 import { useCompare } from '../context/CompareContext'
@@ -29,6 +29,7 @@ export default function CarDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeImg, setActiveImg] = useState(0)
+  const [variants, setVariants] = useState([])
   const { isInCompare, addToCompare, removeFromCompare, compareList } = useCompare()
 
   const gallery = car
@@ -44,6 +45,13 @@ export default function CarDetail() {
       .then(data => { setCar(data); setLoading(false) })
       .catch(() => { setError('Car not found.'); setLoading(false) })
   }, [id])
+
+  useEffect(() => {
+    if (!car) { setVariants([]); return }
+    getCars({ brand: car.brand.name, model: car.model, sort: 'year_desc', limit: 12 })
+      .then(data => setVariants((data.items || []).filter(v => v.id !== car.id)))
+      .catch(() => setVariants([]))
+  }, [car?.id])
 
   if (loading) {
     return (
@@ -209,6 +217,40 @@ export default function CarDetail() {
               <SpecRow label="Annual Service" value={car.service_cost ? formatINR(car.service_cost) : null} />
             </tbody>
           </table>
+
+          {/* Other years available */}
+          {variants.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-border">
+              <h2 className="text-lg font-display font-semibold text-gray-900 mb-4">
+                Other Years Available
+              </h2>
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {variants.map(v => (
+                  <Link
+                    key={v.id}
+                    to={`/cars/${v.id}`}
+                    className="shrink-0 w-40 border border-border rounded-lg p-3 hover:border-primary hover:shadow-card transition-all"
+                  >
+                    <p className="text-sm font-display font-bold text-gray-900">{v.year ?? '—'}</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {v.fuel_type && (
+                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${FUEL_COLORS[v.fuel_type] || 'bg-gray-100 text-gray-600'}`}>
+                          {v.fuel_type}
+                        </span>
+                      )}
+                      {v.transmission && (
+                        <span className="text-[10px] text-muted border border-border px-1.5 py-0.5 rounded-full">
+                          {v.transmission}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-primary mt-2">{formatLakh(v.price)}</p>
+                    {v.mileage && <p className="text-[11px] text-muted">{v.mileage} kmpl</p>}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Metadata */}
           <p className="text-xs text-muted mt-6">

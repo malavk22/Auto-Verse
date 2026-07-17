@@ -121,6 +121,7 @@ def list_cars(
     max_price: Decimal | None = None,
     seats: int | None = None,
     search: str | None = None,
+    model: str | None = None,
     sort: str = "price_asc",
     page: int = 1,
     limit: int = 20,
@@ -135,6 +136,8 @@ def list_cars(
 
     if brand:
         query = query.filter(Brand.name == brand)
+    if model:
+        query = query.filter(Car.model == model)
     if fuel_type:
         query = query.filter(Car.fuel_type == fuel_type)
     if transmission:
@@ -155,16 +158,14 @@ def list_cars(
         "price_desc": Car.price.desc(),
         "mileage_desc": Car.mileage.desc(),
         "year_desc": Car.year.desc(),
+        "none": Car.id.asc(),
     }
     order = sort_map.get(sort, Car.year.desc())
     query = query.order_by(order)
 
-    # Group all matching cars by (brand_id, model) and pick best per group
-    from collections import defaultdict
     all_cars = query.all()
-    groups: dict = defaultdict(list)
-    for car in all_cars:
-        groups[(car.brand_id, car.model)].append(car)
+
+    from collections import defaultdict
 
     def best_car(cars):
         if sort == "price_asc":
@@ -176,11 +177,11 @@ def list_cars(
         if sort == "mileage_desc":
             valid = [c for c in cars if c.mileage is not None]
             return max(valid, key=lambda c: float(c.mileage)) if valid else cars[0]
+        if sort == "none":
+            return cars[0]
         # year_desc default
         valid = [c for c in cars if c.year is not None]
         return max(valid, key=lambda c: c.year) if valid else cars[0]
-
-    unique = [best_car(g) for g in groups.values()]
 
     sort_key_map = {
         "price_asc":    lambda c: (c.price   is None,  float(c.price   or 0)),
@@ -188,7 +189,31 @@ def list_cars(
         "mileage_desc": lambda c: (c.mileage is None, -float(c.mileage or 0), float(c.price or 0)),
         "year_desc":    lambda c: (c.year    is None, -(c.year         or 0),  float(c.price or 0)),
     }
-    unique.sort(key=sort_key_map.get(sort, sort_key_map["year_desc"]))
+
+    if model:
+        # Exact single-model lookup (used for the "other years available"
+        # sibling list on the detail page) — one representative row per
+        # year, since a single (model, year) can have 70+ near-duplicate
+        # rows and would otherwise crowd out the actual year variety.
+        year_groups: dict = defaultdict(list)
+        for car in all_cars:
+            year_groups[car.year].append(car)
+        unique = [best_car(g) for g in year_groups.values()]
+        if sort != "none":
+            unique.sort(key=sort_key_map.get(sort, sort_key_map["year_desc"]))
+    elif search:
+        # Free-text search: show the individual matching rows as-is, so
+        # e.g. searching "swift" surfaces its real year/price spread
+        # across pages rather than collapsing to one pick.
+        unique = all_cars
+    else:
+        # Plain, unfiltered browse view: one card per (brand, model).
+        groups: dict = defaultdict(list)
+        for car in all_cars:
+            groups[(car.brand_id, car.model)].append(car)
+        unique = [best_car(g) for g in groups.values()]
+        if sort != "none":
+            unique.sort(key=sort_key_map.get(sort, sort_key_map["year_desc"]))
 
     total = len(unique)
     items = unique[(page - 1) * limit : page * limit]

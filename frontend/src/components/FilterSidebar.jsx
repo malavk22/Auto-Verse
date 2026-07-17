@@ -236,6 +236,7 @@ function FilterBody({ filters, options, onChange, onReset, activeCount, mobile, 
           <option value="price_desc">Price: High to Low</option>
           <option value="mileage_desc">Best Mileage</option>
           <option value="year_desc">Newest First</option>
+          <option value="none">None</option>
         </select>
       </FilterSection>
     </>
