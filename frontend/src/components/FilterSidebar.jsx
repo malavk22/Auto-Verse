@@ -8,20 +8,16 @@ function CustomSelect({ value, onChange, options, placeholder }) {
   const buttonRef = useRef(null)
   const dropdownRef = useRef(null)
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return
     const handler = (e) => {
-      if (
-        !buttonRef.current?.contains(e.target) &&
-        !dropdownRef.current?.contains(e.target)
-      ) setOpen(false)
+      if (!buttonRef.current?.contains(e.target) && !dropdownRef.current?.contains(e.target))
+        setOpen(false)
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  // Close on scroll so the portal doesn't drift — but NOT when scrolling inside the dropdown itself
   useEffect(() => {
     if (!open) return
     const close = (e) => {
@@ -33,9 +29,7 @@ function CustomSelect({ value, onChange, options, placeholder }) {
   }, [open])
 
   const toggle = () => {
-    if (!open && buttonRef.current) {
-      setRect(buttonRef.current.getBoundingClientRect())
-    }
+    if (!open && buttonRef.current) setRect(buttonRef.current.getBoundingClientRect())
     setOpen(o => !o)
   }
 
@@ -56,10 +50,8 @@ function CustomSelect({ value, onChange, options, placeholder }) {
         <span className={selected?.value !== '' && selected ? 'text-gray-900 font-medium' : 'text-muted'}>
           {selected ? selected.label : placeholder}
         </span>
-        <svg
-          className={`w-4 h-4 text-muted shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-        >
+        <svg className={`w-4 h-4 text-muted shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -67,14 +59,7 @@ function CustomSelect({ value, onChange, options, placeholder }) {
       {open && rect && createPortal(
         <div
           ref={dropdownRef}
-          style={{
-            position: 'fixed',
-            top: rect.bottom + 4,
-            left: rect.left,
-            width: rect.width,
-            zIndex: 9999,
-            maxHeight: '240px',
-          }}
+          style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width, zIndex: 9999, maxHeight: '240px' }}
           className="bg-white border border-border rounded-lg shadow-lg overflow-y-auto"
         >
           {options.map(o => (
@@ -83,9 +68,7 @@ function CustomSelect({ value, onChange, options, placeholder }) {
               type="button"
               onClick={() => { onChange(o.value); setOpen(false) }}
               className={`w-full flex items-center justify-between px-3 py-2.5 text-sm transition-colors text-left ${
-                o.value === value
-                  ? 'bg-primary/8 text-primary font-semibold'
-                  : 'text-gray-700 hover:bg-surface-alt'
+                o.value === value ? 'bg-primary/8 text-primary font-semibold' : 'text-gray-700 hover:bg-surface-alt'
               }`}
             >
               <span>{o.label}</span>
@@ -103,27 +86,30 @@ function CustomSelect({ value, onChange, options, placeholder }) {
   )
 }
 
-export default function FilterSidebar({ filters, options, onChange, onReset }) {
+function FilterSection({ label, children }) {
+  return (
+    <div className="mb-5 pb-5 border-b border-border last:border-0 last:mb-0 last:pb-0">
+      <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">{label}</p>
+      {children}
+    </div>
+  )
+}
+
+function FilterBody({ filters, options, onChange, onReset, activeCount, mobile, onClose }) {
   const handleChange = (key, value) => onChange({ ...filters, [key]: value, page: 1 })
 
   const brandOptions = [
     { value: '', label: 'All Brands' },
     ...(options.brands?.map(b => ({ value: b, label: b })) || []),
   ]
-
   const seatOptions = [
     { value: '', label: 'Any' },
     ...(options.seat_options?.map(s => ({ value: String(s), label: `${s}+ seats` })) || []),
   ]
 
-  const activeCount = [
-    filters.brand, filters.fuel_type, filters.transmission,
-    filters.seats, filters.min_price,
-  ].filter(Boolean).length
-
   return (
-    <div className="w-64 shrink-0 sticky top-20 self-start h-[calc(100vh-5.5rem)]">
-    <aside className="h-full overflow-y-auto bg-white rounded-xl shadow-card p-5">
+    <>
+      {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <h2 className="font-display font-semibold text-gray-900 text-sm">Filters</h2>
@@ -133,13 +119,22 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
             </span>
           )}
         </div>
-        <button
-          onClick={onReset}
-          className="text-xs text-primary hover:underline disabled:text-gray-300"
-          disabled={activeCount === 0}
-        >
-          Reset all
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onReset}
+            className="text-xs text-primary hover:underline disabled:text-gray-300"
+            disabled={activeCount === 0}
+          >
+            Reset all
+          </button>
+          {mobile && (
+            <button onClick={onClose} className="p-1 rounded text-gray-400 hover:text-gray-700 transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Brand */}
@@ -200,7 +195,7 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
         />
       </FilterSection>
 
-      {/* Price — starting from */}
+      {/* Starting Price */}
       <FilterSection label="Starting Price">
         <div className="px-1">
           <input
@@ -243,16 +238,31 @@ export default function FilterSidebar({ filters, options, onChange, onReset }) {
           <option value="year_desc">Newest First</option>
         </select>
       </FilterSection>
-    </aside>
-    </div>
+    </>
   )
 }
 
-function FilterSection({ label, children }) {
+export default function FilterSidebar({ filters, options, onChange, onReset, mobile = false, onClose }) {
+  const activeCount = [
+    filters.brand, filters.fuel_type, filters.transmission,
+    filters.seats, filters.min_price,
+  ].filter(Boolean).length
+
+  const bodyProps = { filters, options, onChange, onReset, activeCount, mobile, onClose }
+
+  if (mobile) {
+    return (
+      <div className="p-5">
+        <FilterBody {...bodyProps} />
+      </div>
+    )
+  }
+
   return (
-    <div className="mb-5 pb-5 border-b border-border last:border-0 last:mb-0 last:pb-0">
-      <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2.5">{label}</p>
-      {children}
+    <div className="w-64 shrink-0 sticky top-20 self-start h-[calc(100vh-5.5rem)]">
+      <aside className="h-full overflow-y-auto bg-white rounded-xl shadow-card p-5">
+        <FilterBody {...bodyProps} />
+      </aside>
     </div>
   )
 }
