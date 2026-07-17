@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session, joinedload, defer
 
 from app.database import get_db
 from app.models.car import Car, Brand
-from app.schemas.car import CarOut, CarListItem, PaginatedCars, FilterOptions
+from sqlalchemy import or_
+from app.schemas.car import CarOut, CarListItem, PaginatedCars, FilterOptions, AutocompleteItem
 
 router = APIRouter(prefix="/cars", tags=["cars"])
 
@@ -62,6 +63,39 @@ def compare_cars(ids: str = Query(..., description="Comma-separated car IDs, max
     return cars
 
 
+@router.get("/autocomplete", response_model=list[AutocompleteItem])
+def autocomplete(q: str = Query(""), db: Session = Depends(get_db)):
+    if len(q.strip()) < 2:
+        return []
+    pattern = f"%{q.strip()}%"
+
+    models = (
+        db.query(Car.model, Brand.name)
+        .join(Car.brand)
+        .filter(Car.is_active == 1, Car.model.ilike(pattern))
+        .distinct()
+        .order_by(Car.model)
+        .limit(7)
+        .all()
+    )
+    brands = (
+        db.query(Brand.name)
+        .filter(Brand.name.ilike(pattern))
+        .distinct()
+        .order_by(Brand.name)
+        .limit(3)
+        .all()
+    )
+
+    results = [AutocompleteItem(type="model", label=m[0], brand=m[1]) for m in models]
+    model_brands = {r.brand for r in results}
+    for (b,) in brands:
+        if b not in model_brands:
+            results.append(AutocompleteItem(type="brand", label=b))
+
+    return results[:10]
+
+
 @router.get("/{car_id}", response_model=CarOut)
 def get_car(car_id: int, db: Session = Depends(get_db)):
     car = (
@@ -86,6 +120,7 @@ def list_cars(
     min_price: Decimal | None = None,
     max_price: Decimal | None = None,
     seats: int | None = None,
+    search: str | None = None,
     sort: str = "price_asc",
     page: int = 1,
     limit: int = 20,
@@ -110,6 +145,10 @@ def list_cars(
         query = query.filter(Car.price <= max_price)
     if seats is not None:
         query = query.filter(Car.seats >= seats)
+    if search:
+        query = query.filter(
+            or_(Car.model.ilike(f'%{search}%'), Brand.name.ilike(f'%{search}%'))
+        )
 
     sort_map = {
         "price_asc": Car.price.asc(),

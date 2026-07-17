@@ -155,3 +155,9 @@ class RecommendResult(BaseModel):
     car: RecommendCarItem
     score: int
     reasons: list[str]
+
+
+class AutocompleteItem(BaseModel):
+    type: str        # "model" or "brand"
+    label: str
+    brand: str | None = None
