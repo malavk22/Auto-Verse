@@ -21,3 +21,11 @@ export const getDepreciation = (carId, condition = 'good', accidentHistory = fal
       no_service_records: noServiceRecords,
     },
   }).then(r => r.data)
+
+export const getEmi = (onRoadPrice, downPayment, interestRate, tenureMonths) =>
+  api.post('/calculators/emi', {
+    on_road_price: onRoadPrice,
+    down_payment: downPayment,
+    interest_rate: interestRate,
+    tenure_months: tenureMonths,
+  }).then(r => r.data)

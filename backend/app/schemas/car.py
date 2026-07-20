@@ -105,6 +105,35 @@ class OwnershipResult(BaseModel):
     adjusted_resale_value: Decimal
 
 
+# ── EMI Calculator ────────────────────────────────────────────────────────────
+
+class EMIRequest(BaseModel):
+    on_road_price: Decimal
+    down_payment: Decimal
+    interest_rate: Decimal = Decimal("9.5")
+    tenure_months: int = 60
+
+
+class EMIScheduleEntry(BaseModel):
+    year: int
+    principal_paid: Decimal
+    interest_paid: Decimal
+    balance: Decimal
+
+
+class EMIResult(BaseModel):
+    on_road_price: Decimal
+    down_payment: Decimal
+    down_payment_pct: Decimal
+    loan_amount: Decimal
+    interest_rate: Decimal
+    tenure_months: int
+    monthly_emi: Decimal
+    total_interest: Decimal
+    total_payment: Decimal
+    schedule: list[EMIScheduleEntry]
+
+
 # ── Depreciation ─────────────────────────────────────────────────────────────
 
 class DepreciationEntry(BaseModel):

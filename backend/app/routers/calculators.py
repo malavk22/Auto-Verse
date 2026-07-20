@@ -3,11 +3,21 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.car import Car
-from app.schemas.car import OwnershipRequest, OwnershipResult, DepreciationResult
+from app.schemas.car import OwnershipRequest, OwnershipResult, DepreciationResult, EMIRequest, EMIResult
 from app.services.ownership_cost import calculate_ownership
 from app.services.depreciation import calculate_depreciation
+from app.services.emi import calculate_emi
 
 router = APIRouter(prefix="/calculators", tags=["calculators"])
+
+
+@router.post("/emi", response_model=EMIResult)
+def emi(req: EMIRequest):
+    if req.down_payment > req.on_road_price:
+        raise HTTPException(status_code=400, detail="Down payment cannot exceed on-road price")
+    if not (1 <= req.tenure_months <= 84):
+        raise HTTPException(status_code=400, detail="Tenure must be between 1 and 84 months")
+    return calculate_emi(req.on_road_price, req.down_payment, req.interest_rate, req.tenure_months)
 
 
 @router.post("/ownership", response_model=OwnershipResult)
