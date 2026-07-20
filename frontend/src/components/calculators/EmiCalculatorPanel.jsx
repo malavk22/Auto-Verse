@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { getEmi } from '../../api/calculators'
 import { formatINR, formatLakh } from '../../utils/formatCurrency'
 import StatusBar from '../ui/StatusBar'
+import { useAuth } from '../../context/AuthContext'
 
 export default function EmiCalculatorPanel({ car }) {
+  const { isAuthenticated, openAuthModal } = useAuth()
   const [onRoadPrice, setOnRoadPrice] = useState(1000000)
   const [downPayment, setDownPayment] = useState(200000)
   const [interestRate, setInterestRate] = useState(9.5)
@@ -23,6 +25,7 @@ export default function EmiCalculatorPanel({ car }) {
   }, [car?.id])
 
   const handleCalculate = async () => {
+    if (!isAuthenticated) { openAuthModal(); return }
     setCalculating(true)
     setError(null)
     try {
