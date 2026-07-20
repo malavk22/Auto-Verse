@@ -74,6 +74,10 @@ class FilterOptions(BaseModel):
     max_price: Decimal | None
 
 
+class FavoriteIdsResponse(BaseModel):
+    car_ids: list[int]
+
+
 # ── Ownership Calculator ──────────────────────────────────────────────────────
 
 class OwnershipRequest(BaseModel):
