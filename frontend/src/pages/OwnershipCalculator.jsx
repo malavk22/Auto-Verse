@@ -6,6 +6,7 @@ import { formatINR, formatLakh } from '../utils/formatCurrency'
 import CustomSelect from '../components/ui/CustomSelect'
 import StatusBar from '../components/ui/StatusBar'
 import EmiCalculatorPanel from '../components/calculators/EmiCalculatorPanel'
+import { useAuth } from '../context/AuthContext'
 
 const FUEL_DEFAULTS = { Petrol: 103, Diesel: 90, CNG: 85, Electric: 8 }
 
@@ -65,6 +66,7 @@ function CostCard({ label, annual, total, years, color, pct }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function OwnershipCalculator() {
+  const { isAuthenticated, openAuthModal } = useAuth()
   const [searchParams] = useSearchParams()
   const urlCarId = searchParams.get('car_id')
   const urlTab = searchParams.get('tab')
@@ -125,6 +127,7 @@ export default function OwnershipCalculator() {
 
   const handleCalculate = async () => {
     if (!car) return
+    if (!isAuthenticated) { openAuthModal(); return }
     setCalculating(true)
     setError(null)
     try {

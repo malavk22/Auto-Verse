@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getRecommendations } from '../api/recommendations'
 import { formatLakh, formatINR } from '../utils/formatCurrency'
+import { useAuth } from '../context/AuthContext'
 
 const FUEL_OPTIONS = ['Petrol', 'Diesel', 'CNG', 'Electric']
 const SEAT_OPTIONS = [4, 5, 6, 7]
@@ -170,6 +171,7 @@ function ResultCard({ item, rank }) {
 }
 
 export default function Recommendations() {
+  const { isAuthenticated, openAuthModal } = useAuth()
   const [budget, setBudget] = useState(1500000)
   const [fuelType, setFuelType] = useState(null)
   const isElectric = fuelType === 'Electric'
@@ -187,6 +189,7 @@ export default function Recommendations() {
   const budgetLakh = (budget / 100000).toFixed(0)
 
   const handleFind = async () => {
+    if (!isAuthenticated) { openAuthModal(); return }
     setLoading(true)
     setError(null)
     setSearched(true)

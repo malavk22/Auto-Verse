@@ -4,6 +4,7 @@ import { getCar, getCars } from '../api/cars'
 import { formatLakh, formatINR } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
 import { useCompare } from '../context/CompareContext'
+import FavoriteButton from '../components/FavoriteButton'
 
 const FUEL_COLORS = {
   Petrol: 'bg-orange-100 text-orange-700',
@@ -145,7 +146,10 @@ export default function CarDetail() {
           <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
             <div>
               <p className="text-sm font-medium text-muted uppercase tracking-wide mb-1">{car.brand.name}</p>
-              <h1 className="text-3xl font-display font-bold text-gray-900">{car.model}</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-display font-bold text-gray-900">{car.model}</h1>
+                <FavoriteButton car={car} className="w-9 h-9 border border-border shrink-0" />
+              </div>
               <div className="flex items-center gap-2 mt-2">
                 {car.year && <span className="text-sm text-muted">{car.year}</span>}
                 {car.fuel_type && (
