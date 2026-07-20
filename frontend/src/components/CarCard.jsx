@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { formatLakh } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
 import { useCompare } from '../context/CompareContext'
+import FavoriteButton from './FavoriteButton'
 
 const FUEL_COLORS = {
   Petrol: 'bg-orange-100 text-orange-700',
@@ -25,7 +26,8 @@ export default function CarCard({ car }) {
       to={`/cars/${car.id}`}
       className="bg-white rounded-lg shadow-card hover:shadow-card-hover transition-shadow duration-200 overflow-hidden flex flex-col"
     >
-      <div className="h-44 bg-surface-alt flex items-center justify-center overflow-hidden">
+      <div className="relative h-44 bg-surface-alt flex items-center justify-center overflow-hidden">
+        <FavoriteButton car={car} className="absolute top-2 right-2 z-10 w-8 h-8 shadow-card" />
         {(car.image_url || brandImages[car.brand.name]) ? (
           <img
             src={car.image_url || brandImages[car.brand.name]}

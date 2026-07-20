@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.car import Car
+from app.models.user import User
+from app.routers.auth import get_current_user
 from app.schemas.car import OwnershipRequest, OwnershipResult, DepreciationResult, EMIRequest, EMIResult
 from app.services.ownership_cost import calculate_ownership
 from app.services.depreciation import calculate_depreciation
@@ -12,7 +14,7 @@ router = APIRouter(prefix="/calculators", tags=["calculators"])
 
 
 @router.post("/emi", response_model=EMIResult)
-def emi(req: EMIRequest):
+def emi(req: EMIRequest, current_user: User = Depends(get_current_user)):
     if req.down_payment > req.on_road_price:
         raise HTTPException(status_code=400, detail="Down payment cannot exceed on-road price")
     if not (1 <= req.tenure_months <= 84):
@@ -21,7 +23,7 @@ def emi(req: EMIRequest):
 
 
 @router.post("/ownership", response_model=OwnershipResult)
-def ownership_cost(req: OwnershipRequest, db: Session = Depends(get_db)):
+def ownership_cost(req: OwnershipRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     car = (
         db.query(Car)
         .options(joinedload(Car.brand))
@@ -44,6 +46,7 @@ def depreciation(
     multiple_owners: bool = Query(False),
     no_service_records: bool = Query(False),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     car = (
         db.query(Car)
