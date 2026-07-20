@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { useSearchParams, Link } from 'react-router-dom'
 import { getCar, getCars, getFilterOptions } from '../api/cars'
 import { getOwnershipCost, getDepreciation } from '../api/calculators'
 import { formatINR, formatLakh } from '../utils/formatCurrency'
+import CustomSelect from '../components/ui/CustomSelect'
+import StatusBar from '../components/ui/StatusBar'
+import EmiCalculatorPanel from '../components/calculators/EmiCalculatorPanel'
 
 const FUEL_DEFAULTS = { Petrol: 103, Diesel: 90, CNG: 85, Electric: 8 }
 
@@ -47,138 +49,6 @@ const CONDITIONS = [
   },
 ]
 
-// ── Custom dropdown ───────────────────────────────────────────────────────────
-function CustomSelect({ value, onChange, options, placeholder, disabled }) {
-  const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState(null)
-  const buttonRef = useRef(null)
-  const dropdownRef = useRef(null)
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e) => {
-      if (!buttonRef.current?.contains(e.target) && !dropdownRef.current?.contains(e.target))
-        setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    const close = (e) => {
-      if (dropdownRef.current?.contains(e.target)) return
-      setOpen(false)
-    }
-    window.addEventListener('scroll', close, true)
-    return () => window.removeEventListener('scroll', close, true)
-  }, [open])
-
-  const toggle = () => {
-    if (disabled) return
-    if (!open && buttonRef.current) setPos(buttonRef.current.getBoundingClientRect())
-    setOpen(o => !o)
-  }
-
-  const selected = options.find(o => o.value === value)
-
-  return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={toggle}
-        disabled={disabled}
-        className={`w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl border text-sm transition-all
-          ${disabled ? 'bg-gray-50 border-gray-200 cursor-not-allowed opacity-60' : ''}
-          ${!disabled && open ? 'border-primary ring-2 ring-primary/20 bg-white' : ''}
-          ${!disabled && !open ? 'border-border bg-white hover:border-primary/60 hover:shadow-sm' : ''}`}
-      >
-        <span className={selected?.value !== '' && selected ? 'text-gray-900 font-medium' : 'text-muted'}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <svg className={`w-4 h-4 text-muted shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-
-      {open && pos && createPortal(
-        <div
-          ref={dropdownRef}
-          style={{ position: 'fixed', top: pos.bottom + 4, left: pos.left, width: pos.width, zIndex: 9999, maxHeight: 220 }}
-          className="bg-white border border-border rounded-xl shadow-lg overflow-y-auto"
-        >
-          {options.map(o => (
-            <button
-              key={o.value}
-              type="button"
-              onClick={() => { onChange(o.value); setOpen(false) }}
-              className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors text-left
-                ${o.value === value ? 'bg-primary/8 text-primary font-semibold' : 'text-gray-700 hover:bg-surface-alt'}`}
-            >
-              <span>{o.label}</span>
-              {o.value === value && (
-                <svg className="w-3.5 h-3.5 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </button>
-          ))}
-        </div>,
-        document.body
-      )}
-    </>
-  )
-}
-
-// ── Status bar slider with manual input ──────────────────────────────────────
-function StatusBar({ label, icon, min, max, step, value, onChange, format, unit, color = 'bg-primary' }) {
-  const pct = Math.round(((Math.min(value, max) - min) / (max - min)) * 100)
-
-  const handleInput = (raw) => {
-    const v = Number(raw)
-    if (isNaN(v) || raw === '') return
-    onChange(Math.min(max, Math.max(min, v)))
-  }
-
-  return (
-    <div className="bg-gray-50 rounded-xl p-4 border border-border">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-base">{icon}</span>
-          <span className="text-sm font-semibold text-gray-700">{label}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <input
-            type="number"
-            min={min}
-            max={max}
-            step={step}
-            value={value}
-            onChange={e => handleInput(e.target.value)}
-            onBlur={e => handleInput(e.target.value)}
-            className="w-24 text-sm font-bold text-primary text-center bg-primary/10 border border-primary/20 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white"
-          />
-          {unit && <span className="text-xs text-muted">{unit}</span>}
-        </div>
-      </div>
-      <div className="relative h-3 bg-gray-200 rounded-full overflow-hidden mb-2">
-        <div className={`absolute left-0 top-0 h-full ${color} rounded-full transition-all duration-150`} style={{ width: `${pct}%` }} />
-      </div>
-      <input
-        type="range" min={min} max={max} step={step} value={Math.min(value, max)}
-        onChange={e => onChange(Number(e.target.value))}
-        className="w-full h-3 opacity-0 cursor-pointer block -mt-5"
-      />
-      <div className="flex justify-between text-xs text-muted mt-1">
-        <span>{format(min)}</span>
-        <span>{format(max)}</span>
-      </div>
-    </div>
-  )
-}
-
 function CostCard({ label, annual, total, years, color, pct }) {
   return (
     <div className={`rounded-xl border ${color.border} ${color.light} p-4`}>
@@ -197,7 +67,9 @@ function CostCard({ label, annual, total, years, color, pct }) {
 export default function OwnershipCalculator() {
   const [searchParams] = useSearchParams()
   const urlCarId = searchParams.get('car_id')
+  const urlTab = searchParams.get('tab')
 
+  const [activeTab, setActiveTab] = useState(urlTab === 'emi' ? 'emi' : 'ownership')
   const [car, setCar] = useState(null)
   const [carLoading, setCarLoading] = useState(false)
   const [brands, setBrands] = useState([])
@@ -286,8 +158,14 @@ export default function OwnershipCalculator() {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-display font-bold text-gray-900">Ownership Cost Calculator</h1>
-        <p className="text-muted mt-1 text-sm">Find the true cost of owning a car — fuel, insurance, maintenance, depreciation &amp; condition impact.</p>
+        <h1 className="text-3xl font-display font-bold text-gray-900">
+          {activeTab === 'emi' ? 'Loan EMI Calculator' : 'Ownership Cost Calculator'}
+        </h1>
+        <p className="text-muted mt-1 text-sm">
+          {activeTab === 'emi'
+            ? 'Estimate your monthly loan payment — principal, interest, and the full repayment schedule.'
+            : 'Find the true cost of owning a car — fuel, insurance, maintenance, depreciation & condition impact.'}
+        </p>
       </div>
 
       {/* ── Step 1: Select a Car ──────────────────────────────────────────── */}
@@ -370,6 +248,29 @@ export default function OwnershipCalculator() {
           </div>
         )}
       </div>
+
+      {/* ── Tab switcher ─────────────────────────────────────────────────── */}
+      <div className="flex gap-2 mb-5 bg-gray-100 rounded-xl p-1">
+        {[
+          { key: 'ownership', label: 'Ownership Cost' },
+          { key: 'emi', label: 'Loan EMI' },
+        ].map(t => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setActiveTab(t.key)}
+            className={`flex-1 text-sm font-semibold py-2.5 rounded-lg transition-colors ${
+              activeTab === t.key ? 'bg-white text-primary shadow-card' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'emi' && <EmiCalculatorPanel car={car} />}
+
+      {activeTab === 'ownership' && (<>
 
       {/* ── Step 2: Set Your Usage ────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl shadow-card p-6 mb-5">
@@ -649,6 +550,8 @@ export default function OwnershipCalculator() {
           </div>
         </div>
       )}
+
+      </>)}
     </div>
   )
 }

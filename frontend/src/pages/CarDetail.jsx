@@ -182,6 +182,12 @@ export default function CarDetail() {
                 >
                   Calculate Ownership Cost
                 </button>
+                <button
+                  onClick={() => navigate(`/calculator?car_id=${car.id}&tab=emi`)}
+                  className="text-sm font-medium px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary hover:text-white transition-colors"
+                >
+                  Calculate EMI
+                </button>
               </div>
             </div>
           </div>
