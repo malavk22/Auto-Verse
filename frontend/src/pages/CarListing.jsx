@@ -21,6 +21,7 @@ export default function CarListing() {
     if (searchParams.get('transmission')) f.transmission = searchParams.get('transmission')
     if (searchParams.get('seats')) f.seats = Number(searchParams.get('seats'))
     if (searchParams.get('min_price')) f.min_price = Number(searchParams.get('min_price'))
+    if (searchParams.get('max_price')) f.max_price = Number(searchParams.get('max_price'))
     if (searchParams.get('search')) f.search = searchParams.get('search')
     if (searchParams.get('sort')) f.sort = searchParams.get('sort')
     if (searchParams.get('page')) f.page = Number(searchParams.get('page'))
@@ -55,7 +56,7 @@ export default function CarListing() {
 
   const activeFilterCount = [
     filters.brand, filters.fuel_type, filters.transmission,
-    filters.seats, filters.min_price, filters.search,
+    filters.seats, filters.min_price, filters.max_price, filters.search,
   ].filter(Boolean).length
 
   return (

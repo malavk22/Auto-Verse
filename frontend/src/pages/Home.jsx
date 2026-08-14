@@ -6,7 +6,7 @@ const FEATURES = [
   { icon: '🔍', title: 'Smart Search',         desc: 'Filter by brand, fuel, budget, seats and more.',   to: '/cars' },
   { icon: '⚖️', title: 'Side-by-Side Compare', desc: 'Compare up to 3 cars across every spec.',          to: '/compare' },
   { icon: '💡', title: 'Recommendations',       desc: 'Tell us your needs — we find the best match.',     to: '/recommendations' },
-  { icon: '💰', title: 'Ownership Calculator',  desc: 'See the true 5-year cost before you buy.',         to: '/ownership' },
+  { icon: '💰', title: 'Ownership Calculator',  desc: 'See the true 5-year cost before you buy.',         to: '/calculator' },
 ]
 
 export default function Home() {

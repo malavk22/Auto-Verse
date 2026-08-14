@@ -195,9 +195,15 @@ function FilterBody({ filters, options, onChange, onReset, activeCount, mobile, 
         />
       </FilterSection>
 
-      {/* Starting Price */}
-      <FilterSection label="Starting Price">
+      {/* Price Range */}
+      <FilterSection label="Price Range">
         <div className="px-1">
+          <div className="flex justify-between text-xs text-muted mb-1">
+            <span>Min</span>
+            <span className="font-semibold text-primary">
+              {filters.min_price ? formatLakh(filters.min_price) : formatLakh(options.min_price || 0)}
+            </span>
+          </div>
           <input
             type="range"
             min={options.min_price || 0}
@@ -206,10 +212,10 @@ function FilterBody({ filters, options, onChange, onReset, activeCount, mobile, 
             value={filters.min_price || options.min_price || 0}
             onChange={e => {
               const val = Number(e.target.value)
+              const clamped = filters.max_price != null ? Math.min(val, filters.max_price) : val
               onChange({
                 ...filters,
-                min_price: val <= (options.min_price || 0) ? undefined : val,
-                max_price: undefined,
+                min_price: clamped <= (options.min_price || 0) ? undefined : clamped,
                 sort: 'price_asc',
                 page: 1,
               })
@@ -217,11 +223,31 @@ function FilterBody({ filters, options, onChange, onReset, activeCount, mobile, 
             className="w-full accent-primary cursor-pointer"
           />
         </div>
-        <div className="flex justify-between text-xs text-muted mt-1">
-          <span>{formatLakh(options.min_price || 0)}</span>
-          <span className="font-semibold text-primary">
-            {filters.min_price ? `From ${formatLakh(filters.min_price)}` : 'Any'}
-          </span>
+        <div className="px-1 mt-3">
+          <div className="flex justify-between text-xs text-muted mb-1">
+            <span>Max</span>
+            <span className="font-semibold text-primary">
+              {filters.max_price ? formatLakh(filters.max_price) : formatLakh(options.max_price || 6600000)}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={options.min_price || 0}
+            max={options.max_price || 6600000}
+            step={100000}
+            value={filters.max_price || options.max_price || 6600000}
+            onChange={e => {
+              const val = Number(e.target.value)
+              const clamped = filters.min_price != null ? Math.max(val, filters.min_price) : val
+              onChange({
+                ...filters,
+                max_price: clamped >= (options.max_price || 6600000) ? undefined : clamped,
+                sort: 'price_asc',
+                page: 1,
+              })
+            }}
+            className="w-full accent-primary cursor-pointer"
+          />
         </div>
       </FilterSection>
 
@@ -246,7 +272,7 @@ function FilterBody({ filters, options, onChange, onReset, activeCount, mobile, 
 export default function FilterSidebar({ filters, options, onChange, onReset, mobile = false, onClose }) {
   const activeCount = [
     filters.brand, filters.fuel_type, filters.transmission,
-    filters.seats, filters.min_price,
+    filters.seats, filters.min_price, filters.max_price,
   ].filter(Boolean).length
 
   const bodyProps = { filters, options, onChange, onReset, activeCount, mobile, onClose }
