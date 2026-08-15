@@ -1,7 +1,11 @@
 from decimal import Decimal
 
+# Years 0-5 match the published IRDAI motor own-damage depreciation schedule
+# (retained value = 100 - depreciation%). IRDAI does not define rates beyond
+# year 5 ("as agreed between insurer and insured"), so years 6-10 continue
+# the same -5%/year slope as an estimate, not an official figure.
 DEPRECIATION_RATES = [
-    (0, 100), (1, 85), (2, 75), (3, 65), (4, 55),
+    (0, 100), (1, 85), (2, 80), (3, 70), (4, 60),
     (5, 50),  (6, 45), (7, 40), (8, 35), (9, 30), (10, 25),
 ]
 
