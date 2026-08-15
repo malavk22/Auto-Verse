@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { resetPassword } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 import PasswordStrengthBar from '../components/ui/PasswordStrengthBar'
+import EmptyState from '../components/ui/EmptyState'
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams()
@@ -36,11 +37,14 @@ export default function ResetPassword() {
 
   if (!token) {
     return (
-      <div className="max-w-sm mx-auto px-4 py-20 text-center">
-        <p className="text-2xl mb-3">⚠️</p>
-        <h1 className="text-xl font-display font-bold text-gray-900 mb-2">Invalid reset link</h1>
-        <p className="text-sm text-muted mb-6">This link is missing its reset token. Request a new one from the login screen.</p>
-        <Link to="/" className="text-sm font-semibold text-primary hover:underline">Back to Home</Link>
+      <div className="max-w-sm mx-auto">
+        <EmptyState
+          icon="alertTriangle"
+          tone="amber"
+          title="Invalid reset link"
+          description="This link is missing its reset token. Request a new one from the login screen."
+          action={<Link to="/" className="text-sm font-semibold text-primary hover:underline">Back to Home</Link>}
+        />
       </div>
     )
   }
