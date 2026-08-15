@@ -1,29 +1,13 @@
 from decimal import Decimal
 
-CONDITION_MULTIPLIERS = {
-    "excellent": Decimal("1.05"),
-    "good":      Decimal("1.00"),
-    "fair":      Decimal("0.85"),
-    "poor":      Decimal("0.70"),
-    "damaged":   Decimal("0.50"),
-}
+from app.services.condition import condition_multiplier
+from app.services.depreciation import DEPRECIATION_RATES
 
-# Years 0-5 match the published IRDAI motor own-damage depreciation schedule
-# (retained value = 100 - depreciation%). IRDAI does not define rates beyond
-# year 5 ("as agreed between insurer and insured"), so years 6-10 continue
-# the same -5%/year slope as an estimate, not an official figure.
-IRDAI_RATES = {0: 100, 1: 85, 2: 80, 3: 70, 4: 60, 5: 50, 6: 45, 7: 40, 8: 35, 9: 30, 10: 25}
-
-
-def _condition_multiplier(condition, accident_history, multiple_owners, no_service_records):
-    m = CONDITION_MULTIPLIERS.get(condition, Decimal("1.00"))
-    if accident_history:
-        m *= Decimal("0.85")
-    if multiple_owners:
-        m *= Decimal("0.95")
-    if no_service_records:
-        m *= Decimal("0.92")
-    return m
+# Same IRDAI-based schedule as depreciation.py, just keyed by year for O(1)
+# lookup here - kept as a dict view of the one canonical table instead of a
+# second copy of the numbers (years 0-5 are the real IRDAI figures, 6-10 are
+# an estimate; see depreciation.py for the sourcing note).
+IRDAI_RATES = dict(DEPRECIATION_RATES)
 
 
 def calculate_ownership(
@@ -41,7 +25,7 @@ def calculate_ownership(
     annual_maintenance = Decimal(str(car.service_cost)) if car.service_cost else Decimal("10000")
 
     # Depreciation via IRDAI retained-value table (avoids overflow beyond year 8)
-    cond_mult = _condition_multiplier(condition, accident_history, multiple_owners, no_service_records)
+    cond_mult = condition_multiplier(condition, accident_history, multiple_owners, no_service_records)
     yr_key = min(years, 10)
     irdai_pct = Decimal(str(IRDAI_RATES.get(yr_key, 25))) / Decimal("100")
     standard_resale = price * irdai_pct
