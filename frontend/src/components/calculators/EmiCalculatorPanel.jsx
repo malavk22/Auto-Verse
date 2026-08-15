@@ -59,16 +59,16 @@ export default function EmiCalculatorPanel({ car }) {
       <div className="bg-white rounded-2xl shadow-card p-6 mb-5">
         <h2 className="text-base font-display font-semibold text-gray-900 mb-5">Loan Details</h2>
         <div className="space-y-4">
-          <StatusBar label="On-Road Price" icon="🏷️" min={100000} max={10000000} step={10000}
+          <StatusBar label="On-Road Price" icon="tag" min={100000} max={10000000} step={10000}
             value={onRoadPrice} onChange={setOnRoadPrice}
             format={v => `₹${(v / 100000).toFixed(1)}L`} unit="₹" color="bg-primary" />
-          <StatusBar label="Down Payment" icon="💰" min={0} max={onRoadPrice} step={5000}
+          <StatusBar label="Down Payment" icon="wallet" min={0} max={onRoadPrice} step={5000}
             value={Math.min(downPayment, onRoadPrice)} onChange={setDownPayment}
             format={v => `₹${(v / 100000).toFixed(1)}L`} unit="₹" color="bg-accent" />
-          <StatusBar label="Interest Rate" icon="📈" min={5} max={20} step={0.1}
+          <StatusBar label="Interest Rate" icon="trendingUp" min={5} max={20} step={0.1}
             value={interestRate} onChange={setInterestRate}
             format={v => `${v}%`} unit="% p.a." color="bg-purple-500" />
-          <StatusBar label="Loan Tenure" icon="🗓️" min={12} max={84} step={12}
+          <StatusBar label="Loan Tenure" icon="calendar" min={12} max={84} step={12}
             value={tenureMonths} onChange={setTenureMonths}
             format={v => `${(v / 12).toFixed(0)} yr${v > 12 ? 's' : ''}`} unit="months" color="bg-orange-500" />
         </div>

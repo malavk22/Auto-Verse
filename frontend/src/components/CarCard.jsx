@@ -3,6 +3,7 @@ import { formatLakh } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
 import { useCompare } from '../context/CompareContext'
 import FavoriteButton from './FavoriteButton'
+import Icon from './ui/Icon'
 
 const FUEL_COLORS = {
   Petrol: 'bg-orange-100 text-orange-700',
@@ -24,7 +25,7 @@ export default function CarCard({ car }) {
   return (
     <Link
       to={`/cars/${car.id}`}
-      className="bg-white rounded-lg shadow-card hover:shadow-card-hover transition-shadow duration-200 overflow-hidden flex flex-col"
+      className="group bg-white rounded-lg shadow-card hover:shadow-card-hover transition-shadow duration-200 overflow-hidden flex flex-col"
     >
       <div className="relative h-44 bg-surface-alt flex items-center justify-center overflow-hidden">
         <FavoriteButton car={car} className="absolute top-2 right-2 z-10 w-8 h-8 shadow-card" />
@@ -32,12 +33,10 @@ export default function CarCard({ car }) {
           <img
             src={car.image_url || brandImages[car.brand.name]}
             alt={`${car.brand.name} ${car.model}`}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <svg className="w-20 h-20 text-gray-300" fill="currentColor" viewBox="0 0 64 64">
-            <path d="M54 22l-4-8a4 4 0 0 0-3.6-2.2H17.6A4 4 0 0 0 14 14l-4 8A6 6 0 0 0 6 28v8a2 2 0 0 0 2 2h2a6 6 0 0 0 12 0h20a6 6 0 0 0 12 0h2a2 2 0 0 0 2-2v-8a6 6 0 0 0-4-6zM18 40a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm28 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM12 26l3.2-6.4A2 2 0 0 1 17 18h30a2 2 0 0 1 1.8 1.6L52 26H12z" />
-          </svg>
+          <Icon name="car" className="w-20 h-20 text-gray-300" />
         )}
       </div>
 
