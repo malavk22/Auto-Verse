@@ -4,16 +4,31 @@ import { useCompare } from '../context/CompareContext'
 import { compareCars } from '../api/cars'
 import { formatINR, formatLakh } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
+import Icon from '../components/ui/Icon'
+import EmptyState from '../components/ui/EmptyState'
 
-const MEDALS = ['🥇', '🥈', '🥉']
+const RANK_STYLES = [
+  { bg: 'bg-amber-400', ring: 'ring-amber-200' },   // 1st
+  { bg: 'bg-gray-300', ring: 'ring-gray-200' },      // 2nd
+  { bg: 'bg-orange-400', ring: 'ring-orange-200' },  // 3rd
+]
+
+function RankBadge({ rank, className = 'w-7 h-7 text-xs' }) {
+  const style = RANK_STYLES[rank] ?? RANK_STYLES[2]
+  return (
+    <span className={`${className} ${style.bg} rounded-full text-white font-bold flex items-center justify-center shrink-0 ring-2 ${style.ring}`}>
+      {rank + 1}
+    </span>
+  )
+}
 
 const BADGES = [
-  { icon: '💰', label: 'Most Affordable',    compare: 'lower',  raw: c => Number(c.price) },
-  { icon: '⛽', label: 'Best Mileage',       compare: 'higher', raw: c => Number(c.mileage) },
-  { icon: '🔧', label: 'Lowest Maintenance', compare: 'lower',  raw: c => Number(c.service_cost) },
-  { icon: '💪', label: 'Most Powerful',      compare: 'higher', raw: c => c.engine_cc },
-  { icon: '🪑', label: 'Most Spacious',      compare: 'higher', raw: c => c.seats },
-  { icon: '📅', label: 'Most Recent',        compare: 'higher', raw: c => c.year },
+  { icon: 'wallet',  label: 'Most Affordable',    compare: 'lower',  raw: c => Number(c.price) },
+  { icon: 'fuel',    label: 'Best Mileage',       compare: 'higher', raw: c => Number(c.mileage) },
+  { icon: 'sliders', label: 'Lowest Maintenance', compare: 'lower',  raw: c => Number(c.service_cost) },
+  { icon: 'bolt',    label: 'Most Powerful',      compare: 'higher', raw: c => c.engine_cc },
+  { icon: 'expand',  label: 'Most Spacious',      compare: 'higher', raw: c => c.seats },
+  { icon: 'calendar',label: 'Most Recent',        compare: 'higher', raw: c => c.year },
 ]
 
 function computeWinner(cars) {
@@ -101,6 +116,18 @@ function cellClass(spec, car, allCars) {
   return ''
 }
 
+function CarThumb({ car, className = 'w-16 h-16 text-gray-300' }) {
+  return (car.image_url || brandImages[car.brand.name]) ? (
+    <img
+      src={car.image_url || brandImages[car.brand.name]}
+      alt={`${car.brand.name} ${car.model}`}
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <Icon name="car" className={className} />
+  )
+}
+
 export default function Compare() {
   const { compareList, clearCompare } = useCompare()
   const [cars, setCars] = useState([])
@@ -121,13 +148,18 @@ export default function Compare() {
 
   if (compareList.length === 0) {
     return (
-      <div className="max-w-6xl mx-auto px-4 py-20 text-center">
-        <p className="text-5xl mb-4">⚖️</p>
-        <p className="font-display font-semibold text-gray-800 text-lg mb-2">No cars selected</p>
-        <p className="text-sm text-muted mb-6">Add up to 3 cars from the listing to compare them side by side.</p>
-        <Link to="/cars" className="bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors">
-          Browse Cars
-        </Link>
+      <div className="max-w-6xl mx-auto px-4 py-12">
+        <EmptyState
+          icon="compare"
+          tone="gray"
+          title="No cars selected"
+          description="Add up to 3 cars from the listing to compare them side by side."
+          action={
+            <Link to="/cars" className="inline-block bg-primary hover:bg-primary-dark text-white text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors">
+              Browse Cars
+            </Link>
+          }
+        />
       </div>
     )
   }
@@ -146,7 +178,35 @@ export default function Compare() {
         <button onClick={clearCompare} className="text-sm text-error hover:underline">Clear All</button>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Mobile: each car as its own stacked spec card */}
+      <div className="md:hidden space-y-6">
+        {cars.map(car => (
+          <div key={car.id} className="bg-white rounded-xl shadow-card overflow-hidden">
+            <div className="h-40 bg-surface-alt flex items-center justify-center overflow-hidden">
+              <CarThumb car={car} />
+            </div>
+            <div className="p-4 text-center border-b border-border">
+              <p className="text-xs text-muted uppercase tracking-wide">{car.brand.name}</p>
+              <p className="font-display font-bold text-gray-900 text-lg leading-tight">{car.model}</p>
+              <p className="text-primary font-display font-bold text-xl mt-1">{formatLakh(car.price)}</p>
+              <Link to={`/cars/${car.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">
+                View details →
+              </Link>
+            </div>
+            <div className="divide-y divide-border">
+              {SPECS.map((spec, i) => (
+                <div key={i} className={`flex items-center justify-between px-4 py-2.5 text-sm ${cellClass(spec, car, cars)}`}>
+                  <span className="text-muted font-medium">{spec.label}</span>
+                  <span className="font-semibold">{spec.render(car)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: side-by-side spec table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full border-separate border-spacing-0">
 
           {/* Car header */}
@@ -159,17 +219,7 @@ export default function Compare() {
                 <th key={car.id} className="pb-6 px-3 min-w-[200px]">
                   <div className="bg-white rounded-xl shadow-card overflow-hidden">
                     <div className="h-40 bg-surface-alt flex items-center justify-center overflow-hidden">
-                      {(car.image_url || brandImages[car.brand.name]) ? (
-                        <img
-                          src={car.image_url || brandImages[car.brand.name]}
-                          alt={`${car.brand.name} ${car.model}`}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <svg className="w-16 h-16 text-gray-300" fill="currentColor" viewBox="0 0 64 64">
-                          <path d="M54 22l-4-8a4 4 0 0 0-3.6-2.2H17.6A4 4 0 0 0 14 14l-4 8A6 6 0 0 0 6 28v8a2 2 0 0 0 2 2h2a6 6 0 0 0 12 0h20a6 6 0 0 0 12 0h2a2 2 0 0 0 2-2v-8a6 6 0 0 0-4-6zM18 40a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm28 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM12 26l3.2-6.4A2 2 0 0 1 17 18h30a2 2 0 0 1 1.8 1.6L52 26H12z" />
-                        </svg>
-                      )}
+                      <CarThumb car={car} />
                     </div>
                     <div className="p-4 text-center">
                       <p className="text-xs text-muted uppercase tracking-wide">{car.brand.name}</p>
@@ -234,7 +284,7 @@ export default function Compare() {
           <div className="mt-10 bg-white rounded-2xl shadow-card overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-teal-600 to-teal-500 px-6 py-4 flex items-center gap-3">
-              <span className="text-2xl">🏆</span>
+              <Icon name="award" className="w-6 h-6 text-white" />
               <div>
                 <p className="text-white font-display font-bold text-lg leading-tight">Overall Winner</p>
                 <p className="text-teal-100 text-xs mt-0.5">Based on head-to-head spec comparison</p>
@@ -244,16 +294,8 @@ export default function Compare() {
             <div className="p-6">
               {/* Winner highlight card */}
               <div className="flex gap-5 bg-teal-50 border border-teal-200 rounded-xl p-5 mb-6">
-                <div className="w-36 h-24 rounded-xl overflow-hidden bg-gray-100 shrink-0">
-                  {(winner.image_url || brandImages[winner.brand.name]) ? (
-                    <img
-                      src={winner.image_url || brandImages[winner.brand.name]}
-                      alt={winner.model}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-2xl">🚗</div>
-                  )}
+                <div className="w-36 h-24 rounded-xl overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">
+                  <CarThumb car={winner} className="w-10 h-10 text-gray-300" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
@@ -261,7 +303,7 @@ export default function Compare() {
                       <p className="text-xs text-teal-600 font-semibold uppercase tracking-wider">{winner.brand.name}</p>
                       <p className="font-display font-bold text-gray-900 text-2xl leading-tight">{winner.model}</p>
                     </div>
-                    <span className="text-3xl shrink-0">🥇</span>
+                    <Icon name="award" className="w-7 h-7 text-amber-500 shrink-0" />
                   </div>
                   <p className="font-display font-bold text-teal-700 text-lg mt-1">{formatLakh(winner.price)}</p>
                   <p className="text-xs text-gray-500 mt-1">
@@ -275,7 +317,8 @@ export default function Compare() {
                           key={j}
                           className="inline-flex items-center gap-1 text-xs bg-teal-100 border border-teal-200 text-teal-800 font-medium px-2.5 py-1 rounded-full"
                         >
-                          {b.icon} {b.label}
+                          <Icon name={b.icon} className="w-3.5 h-3.5" />
+                          {b.label}
                         </span>
                       ))}
                     </div>
@@ -307,7 +350,7 @@ export default function Compare() {
               </div>
 
               {/* All cars ranked */}
-              <div className={`grid gap-4 ${cars.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              <div className={`grid gap-4 grid-cols-1 ${cars.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
                 {ranked.map((car, i) => (
                   <div
                     key={car.id}
@@ -318,7 +361,7 @@ export default function Compare() {
                     }`}
                   >
                     <div className="flex items-start gap-2 mb-2">
-                      <span className="text-xl shrink-0">{MEDALS[i]}</span>
+                      <RankBadge rank={i} />
                       <div className="flex-1 min-w-0">
                         <p className="text-[11px] text-muted truncate">{car.brand.name}</p>
                         <p className="font-semibold text-gray-900 text-sm leading-tight truncate">{car.model}</p>
@@ -336,9 +379,10 @@ export default function Compare() {
                         {badges[car.id].map((b, j) => (
                           <span
                             key={j}
-                            className="inline-flex items-center gap-0.5 text-[10px] bg-white border border-border px-1.5 py-0.5 rounded-full text-gray-600 font-medium"
+                            className="inline-flex items-center gap-1 text-[10px] bg-white border border-border px-1.5 py-0.5 rounded-full text-gray-600 font-medium"
                           >
-                            {b.icon} {b.label}
+                            <Icon name={b.icon} className="w-3 h-3" />
+                            {b.label}
                           </span>
                         ))}
                       </div>

@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { getBrands, getAutocomplete } from '../api/cars'
+import Icon from '../components/ui/Icon'
 
 const FEATURES = [
-  { icon: '🔍', title: 'Smart Search',         desc: 'Filter by brand, fuel, budget, seats and more.',   to: '/cars' },
-  { icon: '⚖️', title: 'Side-by-Side Compare', desc: 'Compare up to 3 cars across every spec.',          to: '/compare' },
-  { icon: '💡', title: 'Recommendations',       desc: 'Tell us your needs — we find the best match.',     to: '/recommendations' },
-  { icon: '💰', title: 'Ownership Calculator',  desc: 'See the true 5-year cost before you buy.',         to: '/calculator' },
+  { icon: 'search',  title: 'Smart Search',         desc: 'Filter by brand, fuel, budget, seats and more.',   to: '/cars' },
+  { icon: 'compare', title: 'Side-by-Side Compare', desc: 'Compare up to 3 cars across every spec.',          to: '/compare' },
+  { icon: 'target',  title: 'Recommendations',       desc: 'Tell us your needs — we find the best match.',     to: '/recommendations' },
+  { icon: 'wallet',  title: 'Ownership Calculator',  desc: 'See the true 5-year cost before you buy.',         to: '/calculator' },
 ]
 
 export default function Home() {
@@ -173,7 +174,9 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {FEATURES.map(f => (
               <Link key={f.title} to={f.to} className="bg-surface-alt rounded-lg p-6 text-center shadow-card hover:shadow-card-hover hover:border-primary/20 border border-transparent transition-all group">
-                <div className="text-4xl mb-3">{f.icon}</div>
+                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3 group-hover:bg-primary group-hover:text-white transition-colors">
+                  <Icon name={f.icon} className="w-6 h-6" />
+                </div>
                 <h3 className="font-display font-semibold text-gray-900 mb-1 group-hover:text-primary transition-colors">{f.title}</h3>
                 <p className="text-sm text-muted">{f.desc}</p>
               </Link>
