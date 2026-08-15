@@ -1,16 +1,10 @@
 import { Link } from 'react-router-dom'
-import { formatLakh } from '../utils/formatCurrency'
+import { formatLakhOrCrore } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
 import { useCompare } from '../context/CompareContext'
 import FavoriteButton from './FavoriteButton'
 import Icon from './ui/Icon'
-
-const FUEL_COLORS = {
-  Petrol: 'bg-orange-100 text-orange-700',
-  Diesel: 'bg-blue-100 text-blue-700',
-  Electric: 'bg-green-100 text-green-700',
-  CNG: 'bg-teal-100 text-teal-700',
-}
+import FUEL_COLORS from '../utils/fuelColors'
 
 export default function CarCard({ car }) {
   const { isInCompare, addToCompare, removeFromCompare, compareList } = useCompare()
@@ -62,7 +56,7 @@ export default function CarCard({ car }) {
         <div className="flex items-center justify-between mt-auto pt-3 border-t border-border">
           <div>
             <p className="text-xs text-muted">Ex-showroom</p>
-            <p className="text-lg font-display font-bold text-primary">{formatLakh(car.price)}</p>
+            <p className="text-lg font-display font-bold text-primary">{formatLakhOrCrore(car.price)}</p>
           </div>
           {car.mileage && (
             <div className="text-right">
