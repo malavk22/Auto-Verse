@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { getCars, getFilterOptions } from '../api/cars'
 import CarCard from '../components/CarCard'
 import FilterSidebar from '../components/FilterSidebar'
+import EmptyState from '../components/ui/EmptyState'
 
 const DEFAULT_FILTERS = { sort: 'year_desc', page: 1, limit: 20 }
 
@@ -120,11 +121,13 @@ export default function CarListing() {
                   ))}
                 </div>
               ) : cars?.items?.length === 0 ? (
-                <div className="text-center py-20 text-muted">
-                  <p className="text-4xl mb-3">🚗</p>
-                  <p className="font-medium text-gray-700">No cars match your filters.</p>
-                  <button onClick={handleReset} className="mt-3 text-sm text-primary hover:underline">Clear filters</button>
-                </div>
+                <EmptyState
+                  icon="search"
+                  tone="gray"
+                  title="No cars match your filters"
+                  description="Try widening your price range or clearing a filter or two."
+                  action={<button onClick={handleReset} className="text-sm font-semibold text-primary hover:underline">Clear filters</button>}
+                />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
                   {cars.items.map(car => <CarCard key={car.id} car={car} />)}

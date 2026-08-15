@@ -5,6 +5,8 @@ import { formatLakh, formatINR } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
 import { useCompare } from '../context/CompareContext'
 import FavoriteButton from '../components/FavoriteButton'
+import Icon from '../components/ui/Icon'
+import EmptyState from '../components/ui/EmptyState'
 
 const FUEL_COLORS = {
   Petrol: 'bg-orange-100 text-orange-700',
@@ -64,10 +66,13 @@ export default function CarDetail() {
 
   if (error || !car) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-        <p className="text-4xl mb-3">🚫</p>
-        <p className="font-medium text-gray-700 mb-4">{error || 'Car not found.'}</p>
-        <Link to="/cars" className="text-primary hover:underline text-sm">← Back to listing</Link>
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <EmptyState
+          icon="alertTriangle"
+          tone="amber"
+          title={error || 'Car not found.'}
+          action={<Link to="/cars" className="text-sm font-semibold text-primary hover:underline">← Back to listing</Link>}
+        />
       </div>
     )
   }
@@ -88,9 +93,7 @@ export default function CarDetail() {
                 className="w-full h-full object-cover transition-opacity duration-300"
               />
             ) : (
-              <svg className="w-32 h-32 text-gray-300" fill="currentColor" viewBox="0 0 64 64">
-                <path d="M54 22l-4-8a4 4 0 0 0-3.6-2.2H17.6A4 4 0 0 0 14 14l-4 8A6 6 0 0 0 6 28v8a2 2 0 0 0 2 2h2a6 6 0 0 0 12 0h20a6 6 0 0 0 12 0h2a2 2 0 0 0 2-2v-8a6 6 0 0 0-4-6zM18 40a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm28 0a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM12 26l3.2-6.4A2 2 0 0 1 17 18h30a2 2 0 0 1 1.8 1.6L52 26H12z" />
-              </svg>
+              <Icon name="car" className="w-32 h-32 text-gray-300" />
             )}
           </div>
 

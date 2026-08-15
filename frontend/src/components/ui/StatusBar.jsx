@@ -1,3 +1,5 @@
+import Icon from './Icon'
+
 // Indian-style comma grouping (last 3 digits, then pairs): 581900 -> 5,81,900
 function formatGrouped(value) {
   if (value === '' || value === null || value === undefined) return ''
@@ -25,7 +27,7 @@ export default function StatusBar({ label, icon, min, max, step, value, onChange
     <div className="bg-gray-50 rounded-xl p-4 border border-border">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-base">{icon}</span>
+          <Icon name={icon} className="w-4 h-4 text-gray-500" />
           <span className="text-sm font-semibold text-gray-700">{label}</span>
         </div>
         <div className="flex items-center gap-1.5">
