@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { formatLakh } from '../utils/formatCurrency'
+import { formatLakhOrCrore } from '../utils/formatCurrency'
 
 function CustomSelect({ value, onChange, options, placeholder }) {
   const [open, setOpen] = useState(false)
@@ -201,7 +201,7 @@ function FilterBody({ filters, options, onChange, onReset, activeCount, mobile, 
           <div className="flex justify-between text-xs text-muted mb-1">
             <span>Min</span>
             <span className="font-semibold text-primary">
-              {filters.min_price ? formatLakh(filters.min_price) : formatLakh(options.min_price || 0)}
+              {filters.min_price ? formatLakhOrCrore(filters.min_price) : formatLakhOrCrore(options.min_price || 0)}
             </span>
           </div>
           <input
@@ -227,7 +227,7 @@ function FilterBody({ filters, options, onChange, onReset, activeCount, mobile, 
           <div className="flex justify-between text-xs text-muted mb-1">
             <span>Max</span>
             <span className="font-semibold text-primary">
-              {filters.max_price ? formatLakh(filters.max_price) : formatLakh(options.max_price || 6600000)}
+              {filters.max_price ? formatLakhOrCrore(filters.max_price) : formatLakhOrCrore(options.max_price || 6600000)}
             </span>
           </div>
           <input
