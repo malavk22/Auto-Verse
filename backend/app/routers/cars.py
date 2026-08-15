@@ -3,24 +3,25 @@ from __future__ import annotations
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, distinct
-from sqlalchemy.orm import Session, joinedload, defer
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.car import Car, Brand
 from sqlalchemy import or_
+from app.query_helpers import with_brand, with_brand_light
 from app.schemas.car import CarOut, CarListItem, PaginatedCars, FilterOptions, AutocompleteItem
 
 router = APIRouter(prefix="/cars", tags=["cars"])
 
-_filter_options_cache: FilterOptions | None = None
-
 
 @router.get("/filters/options", response_model=FilterOptions)
 def get_filter_options(db: Session = Depends(get_db)):
-    global _filter_options_cache
-    if _filter_options_cache is not None:
-        return _filter_options_cache
-
+    # Not cached: the dataset only changes via offline seed scripts (there's
+    # no admin "add car" endpoint), so a process-lifetime cache here has no
+    # way to ever invalidate itself - it previously went stale the moment
+    # any car/brand was added while the server kept running. These are a
+    # handful of indexed DISTINCT/MIN/MAX scans, cheap enough to run per
+    # request at this dataset size.
     brands = [r[0] for r in db.query(distinct(Brand.name)).order_by(Brand.name).all()]
     fuels = [r[0] for r in db.query(distinct(Car.fuel_type)).filter(Car.fuel_type.isnot(None)).order_by(Car.fuel_type).all()]
     transmissions = [r[0] for r in db.query(distinct(Car.transmission)).filter(Car.transmission.isnot(None)).order_by(Car.transmission).all()]
@@ -28,7 +29,7 @@ def get_filter_options(db: Session = Depends(get_db)):
     min_price = db.query(func.min(Car.price)).scalar()
     max_price = db.query(func.max(Car.price)).scalar()
 
-    _filter_options_cache = FilterOptions(
+    return FilterOptions(
         brands=brands,
         fuel_types=fuels,
         transmissions=transmissions,
@@ -36,7 +37,6 @@ def get_filter_options(db: Session = Depends(get_db)):
         min_price=min_price,
         max_price=max_price,
     )
-    return _filter_options_cache
 
 
 @router.get("/brands", response_model=list[str])
@@ -50,8 +50,7 @@ def compare_cars(ids: str = Query(..., description="Comma-separated car IDs, max
     if not id_list:
         raise HTTPException(status_code=400, detail="Provide at least one valid car ID")
     cars = (
-        db.query(Car)
-        .options(joinedload(Car.brand))
+        with_brand(db.query(Car))
         .filter(Car.id.in_(id_list), Car.is_active == 1)
         .all()
     )
@@ -99,8 +98,7 @@ def autocomplete(q: str = Query(""), db: Session = Depends(get_db)):
 @router.get("/{car_id}", response_model=CarOut)
 def get_car(car_id: int, db: Session = Depends(get_db)):
     car = (
-        db.query(Car)
-        .options(joinedload(Car.brand))
+        with_brand(db.query(Car))
         .filter(Car.id == car_id, Car.is_active == 1)
         .first()
     )
@@ -128,8 +126,7 @@ def list_cars(
     db: Session = Depends(get_db),
 ):
     query = (
-        db.query(Car)
-        .options(joinedload(Car.brand), defer(Car.gallery_images))
+        with_brand_light(db.query(Car))
         .join(Car.brand)
         .filter(Car.is_active == 1)
     )

@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy.orm import Session, joinedload, defer
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.car import Car
 from app.models.favorite import Favorite
 from app.models.user import User
+from app.query_helpers import with_brand_light
 from app.routers.auth import get_current_user
 from app.schemas.car import CarListItem, FavoriteIdsResponse
 
@@ -20,9 +21,8 @@ def get_favorite_ids(db: Session = Depends(get_db), current_user: User = Depends
 @router.get("", response_model=list[CarListItem])
 def get_favorites(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     cars = (
-        db.query(Car)
+        with_brand_light(db.query(Car))
         .join(Favorite, Favorite.car_id == Car.id)
-        .options(joinedload(Car.brand), defer(Car.gallery_images))
         .filter(Favorite.user_id == current_user.id, Car.is_active == 1)
         .order_by(Favorite.created_at.desc())
         .all()

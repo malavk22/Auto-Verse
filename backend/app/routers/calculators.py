@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.car import Car
 from app.models.user import User
+from app.query_helpers import with_brand
 from app.routers.auth import get_current_user
 from app.schemas.car import OwnershipRequest, OwnershipResult, DepreciationResult, EMIRequest, EMIResult
 from app.services.ownership_cost import calculate_ownership
@@ -25,8 +26,7 @@ def emi(req: EMIRequest, current_user: User = Depends(get_current_user)):
 @router.post("/ownership", response_model=OwnershipResult)
 def ownership_cost(req: OwnershipRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     car = (
-        db.query(Car)
-        .options(joinedload(Car.brand))
+        with_brand(db.query(Car))
         .filter(Car.id == req.car_id, Car.is_active == 1)
         .first()
     )
@@ -49,8 +49,7 @@ def depreciation(
     current_user: User = Depends(get_current_user),
 ):
     car = (
-        db.query(Car)
-        .options(joinedload(Car.brand))
+        with_brand(db.query(Car))
         .filter(Car.id == car_id, Car.is_active == 1)
         .first()
     )
