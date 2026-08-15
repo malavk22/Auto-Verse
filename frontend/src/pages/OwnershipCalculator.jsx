@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { getCar, getCars, getFilterOptions } from '../api/cars'
 import { getOwnershipCost, getDepreciation } from '../api/calculators'
-import { formatINR, formatLakh } from '../utils/formatCurrency'
+import { formatINR, formatLakh, formatLakhOrCrore } from '../utils/formatCurrency'
 import CustomSelect from '../components/ui/CustomSelect'
 import StatusBar from '../components/ui/StatusBar'
 import Icon from '../components/ui/Icon'
@@ -180,23 +180,33 @@ export default function OwnershipCalculator() {
         </div>
 
         {car ? (
-          <div className="flex items-center gap-4 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
-            {car.image_url && (
-              <img src={car.image_url} alt={car.model} className="w-20 h-14 object-cover rounded-lg shrink-0 border border-border" />
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-0.5">{car.brand.name}</p>
-              <p className="font-display font-bold text-gray-900 text-lg leading-tight truncate">{car.model}</p>
-              <div className="flex items-center flex-wrap gap-2 text-xs text-muted mt-1">
-                {car.year && <span>{car.year}</span>}
-                {car.fuel_type && <span className="bg-white border border-border px-2 py-0.5 rounded-full">{car.fuel_type}</span>}
-                {car.transmission && <span className="bg-white border border-border px-2 py-0.5 rounded-full">{car.transmission}</span>}
-                <span className="font-semibold text-primary">{formatLakh(car.price)}</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-primary/5 border border-primary/20 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-4 min-w-0">
+              {car.image_url && (
+                <img src={car.image_url} alt={car.model} className="w-20 h-14 object-cover rounded-lg shrink-0 border border-border" />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold text-primary uppercase tracking-widest mb-0.5">{car.brand.name}</p>
+                <p className="font-display font-bold text-gray-900 text-lg leading-tight truncate">{car.model}</p>
+                <div className="flex items-center flex-wrap gap-2 text-xs text-muted mt-1">
+                  {car.year && <span>{car.year}</span>}
+                  {car.fuel_type && <span className="bg-white border border-border px-2 py-0.5 rounded-full">{car.fuel_type}</span>}
+                  {car.transmission && <span className="bg-white border border-border px-2 py-0.5 rounded-full">{car.transmission}</span>}
+                  <span className="font-semibold text-primary">{formatLakhOrCrore(car.price)}</span>
+                </div>
               </div>
+              {/* Change — inline on sm+; on mobile it moves below instead of
+                  squeezing the model name into a 2-3 character ellipsis */}
+              <button
+                onClick={() => { setCar(null); setResult(null); setDepreciation(null) }}
+                className="hidden sm:block shrink-0 text-xs font-medium text-gray-500 hover:text-error border border-border hover:border-error px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Change
+              </button>
             </div>
             <button
               onClick={() => { setCar(null); setResult(null); setDepreciation(null) }}
-              className="shrink-0 text-xs font-medium text-gray-500 hover:text-error border border-border hover:border-error px-3 py-1.5 rounded-lg transition-colors"
+              className="sm:hidden self-start shrink-0 text-xs font-medium text-gray-500 hover:text-error border border-border hover:border-error px-3 py-1.5 rounded-lg transition-colors"
             >
               Change
             </button>
@@ -236,7 +246,7 @@ export default function OwnershipCalculator() {
                           <span className="text-sm font-semibold text-gray-900">{c.model}</span>
                           <span className="text-xs text-muted ml-2">{c.year} · {c.fuel_type} · {c.transmission}</span>
                         </div>
-                        <span className="text-sm font-bold text-primary shrink-0">{formatLakh(c.price)}</span>
+                        <span className="text-sm font-bold text-primary shrink-0">{formatLakhOrCrore(c.price)}</span>
                       </button>
                     ))}
                   </div>
@@ -321,7 +331,7 @@ export default function OwnershipCalculator() {
         </div>
 
         {/* Condition cards */}
-        <div className="grid grid-cols-5 gap-2 mb-4">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
           {CONDITIONS.map(c => (
             <button
               key={c.value}
@@ -424,14 +434,14 @@ export default function OwnershipCalculator() {
           {/* Resale value impact */}
           <div className="bg-white rounded-2xl shadow-card p-6">
             <h3 className="text-base font-display font-semibold text-gray-900 mb-4">Condition Impact on Resale Value</h3>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
                 <p className="text-xs text-blue-600 font-semibold uppercase tracking-wide mb-1">Purchase Price</p>
-                <p className="text-lg font-display font-bold text-blue-700">{formatLakh(result.ex_showroom_price)}</p>
+                <p className="text-lg font-display font-bold text-blue-700">{formatLakhOrCrore(result.ex_showroom_price)}</p>
               </div>
               <div className="bg-gray-50 border border-border rounded-xl p-4 text-center">
                 <p className="text-xs text-muted font-semibold uppercase tracking-wide mb-1">Standard Resale</p>
-                <p className="text-lg font-display font-bold text-gray-700">{formatLakh(result.standard_resale_value)}</p>
+                <p className="text-lg font-display font-bold text-gray-700">{formatLakhOrCrore(result.standard_resale_value)}</p>
                 <p className="text-[10px] text-muted mt-0.5">{years <= 5 ? 'IRDAI value' : 'Estimated value'} at yr {years}</p>
               </div>
               <div className={`border rounded-xl p-4 text-center ${
@@ -444,12 +454,12 @@ export default function OwnershipCalculator() {
                 }`}>Your Resale Value</p>
                 <p className={`text-lg font-display font-bold ${
                   Number(result.adjusted_resale_value) >= Number(result.standard_resale_value) ? 'text-green-700' : 'text-red-700'
-                }`}>{formatLakh(result.adjusted_resale_value)}</p>
+                }`}>{formatLakhOrCrore(result.adjusted_resale_value)}</p>
                 <p className={`text-[10px] mt-0.5 font-semibold ${
                   Number(result.adjusted_resale_value) >= Number(result.standard_resale_value) ? 'text-green-500' : 'text-red-500'
                 }`}>
                   {Number(result.adjusted_resale_value) >= Number(result.standard_resale_value) ? '+' : '−'}
-                  {formatLakh(Math.abs(Number(result.adjusted_resale_value) - Number(result.standard_resale_value)))} vs standard
+                  {formatLakhOrCrore(Math.abs(Number(result.adjusted_resale_value) - Number(result.standard_resale_value)))} vs standard
                 </p>
               </div>
             </div>
@@ -468,7 +478,7 @@ export default function OwnershipCalculator() {
               <CostCard label="Maintenance" annual={result.annual_maintenance} total={Number(result.annual_maintenance) * years} years={years} color={COST_COLORS.maintenance} pct={costPct(result.annual_maintenance, years)} />
               <div className={`rounded-xl border ${COST_COLORS.depreciation.border} ${COST_COLORS.depreciation.light} p-4`}>
                 <p className={`text-xs font-semibold uppercase tracking-wide ${COST_COLORS.depreciation.text} mb-2`}>Depreciation</p>
-                <p className={`text-lg font-display font-bold ${COST_COLORS.depreciation.text}`}>{formatLakh(result.total_depreciation)}<span className="text-xs font-normal"> total</span></p>
+                <p className={`text-lg font-display font-bold ${COST_COLORS.depreciation.text}`}>{formatLakhOrCrore(result.total_depreciation)}<span className="text-xs font-normal"> total</span></p>
                 <p className="text-xs text-muted mt-0.5">Value lost over {years} yrs</p>
                 <div className="mt-3 h-1.5 bg-white rounded-full overflow-hidden">
                   <div className={`h-full ${COST_COLORS.depreciation.bg} rounded-full transition-all duration-700`} style={{ width: `${costPct(result.total_depreciation)}%` }} />
@@ -528,7 +538,7 @@ export default function OwnershipCalculator() {
                             </span>
                             {row.year > 0 && diff !== 0 && (
                               <span className={`ml-1.5 text-[10px] font-semibold ${diff >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                ({diff >= 0 ? '+' : ''}{formatLakh(diff)})
+                                ({diff >= 0 ? '+' : ''}{formatLakhOrCrore(diff)})
                               </span>
                             )}
                           </td>
