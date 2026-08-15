@@ -3,23 +3,25 @@ import { Link } from 'react-router-dom'
 import { getRecommendations } from '../api/recommendations'
 import { formatLakh, formatINR } from '../utils/formatCurrency'
 import { useAuth } from '../context/AuthContext'
+import Icon from '../components/ui/Icon'
+import EmptyState from '../components/ui/EmptyState'
 
 const FUEL_OPTIONS = ['Petrol', 'Diesel', 'CNG', 'Electric']
 const SEAT_OPTIONS = [4, 5, 6, 7]
 const TRANSMISSION_OPTIONS = ['Manual', 'Automatic']
 const PRIORITY_OPTIONS = [
-  { value: 'efficiency', label: 'Fuel Efficiency', icon: '⛽' },
-  { value: 'low_maintenance', label: 'Low Maintenance', icon: '🔧' },
+  { value: 'efficiency', label: 'Fuel Efficiency', icon: 'fuel' },
+  { value: 'low_maintenance', label: 'Low Maintenance', icon: 'sliders' },
 ]
 const USE_CASE_OPTIONS = [
-  { value: 'city', label: 'City Commute', icon: '🏙️' },
-  { value: 'highway', label: 'Highway', icon: '🛣️' },
-  { value: 'family', label: 'Family Car', icon: '👨‍👩‍👧‍👦' },
-  { value: 'first_car', label: 'First Car', icon: '🎓' },
+  { value: 'city', label: 'City Commute', icon: 'building' },
+  { value: 'highway', label: 'Highway', icon: 'road' },
+  { value: 'family', label: 'Family Car', icon: 'users' },
+  { value: 'first_car', label: 'First Car', icon: 'flag' },
 ]
 const YEAR_OPTIONS = [
-  { value: '2020', label: '2020 & newer', icon: '📅' },
-  { value: '2022', label: '2022 & newer', icon: '✨' },
+  { value: '2020', label: '2020 & newer', icon: 'calendar' },
+  { value: '2022', label: '2022 & newer', icon: 'star' },
 ]
 
 const FUEL_COLORS = {
@@ -47,20 +49,20 @@ function ChipGroup({ label, options, selected, onToggle, multi = false }) {
       <div className="flex flex-wrap gap-2">
         {options.map(opt => {
           const val = typeof opt === 'object' ? opt.value : opt
-          const display = typeof opt === 'object' ? `${opt.icon} ${opt.label}` : opt
           const active = multi ? selected.includes(val) : selected === val
           return (
             <button
               key={val}
               type="button"
               onClick={() => onToggle(val)}
-              className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full border text-sm font-medium transition-all ${
                 active
                   ? 'bg-primary text-white border-primary shadow-sm'
                   : 'bg-white border-border text-gray-600 hover:border-primary/60 hover:text-primary'
               }`}
             >
-              {display}
+              {typeof opt === 'object' && opt.icon && <Icon name={opt.icon} className="w-4 h-4" />}
+              {typeof opt === 'object' ? opt.label : opt}
             </button>
           )
         })}
@@ -83,7 +85,10 @@ function ResultCard({ item, rank }) {
     }`}>
       {isTopPick && (
         <div className="bg-primary px-4 py-2 flex items-center gap-2">
-          <span className="text-white text-xs font-bold uppercase tracking-widest">⭐ Top Pick for You</span>
+          <span className="flex items-center gap-1.5 text-white text-xs font-bold uppercase tracking-widest">
+            <Icon name="star" className="w-3.5 h-3.5" filled />
+            Top Pick for You
+          </span>
           <span className="ml-auto text-teal-200 text-xs">Best match based on your preferences</span>
         </div>
       )}
@@ -99,7 +104,9 @@ function ResultCard({ item, rank }) {
         {car.image_url ? (
           <img src={car.image_url} alt={car.model} className="w-24 h-16 object-cover rounded-xl shrink-0 border border-border" />
         ) : (
-          <div className="w-24 h-16 bg-gray-100 rounded-xl shrink-0 flex items-center justify-center text-2xl">🚗</div>
+          <div className="w-24 h-16 bg-gray-100 rounded-xl shrink-0 flex items-center justify-center">
+            <Icon name="car" className="w-9 h-9 text-gray-300" />
+          </div>
         )}
 
         {/* Info */}
@@ -346,7 +353,12 @@ export default function Recommendations() {
                 </svg>
                 Finding matches…
               </>
-            ) : '💡 Find My Car'}
+            ) : (
+              <>
+                <Icon name="target" className="w-4 h-4" />
+                Find My Car
+              </>
+            )}
           </button>
           {searched && (
             <button
@@ -374,13 +386,14 @@ export default function Recommendations() {
           </div>
 
           {results.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-card p-10 text-center">
-              <p className="text-4xl mb-3">🔍</p>
-              <p className="font-medium text-gray-700 mb-2">No cars found within ₹{budgetLakh} Lakh</p>
-              <p className="text-sm text-muted mb-4">Try increasing your budget or relaxing some filters.</p>
-              <button onClick={handleReset} className="text-sm text-primary font-medium hover:underline">
-                Reset filters
-              </button>
+            <div className="bg-white rounded-2xl shadow-card">
+              <EmptyState
+                icon="search"
+                tone="gray"
+                title={`No cars found within ₹${budgetLakh} Lakh`}
+                description="Try increasing your budget or relaxing some filters."
+                action={<button onClick={handleReset} className="text-sm font-semibold text-primary hover:underline">Reset filters</button>}
+              />
             </div>
           ) : (
             <div className="space-y-4">

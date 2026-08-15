@@ -5,6 +5,7 @@ import { getOwnershipCost, getDepreciation } from '../api/calculators'
 import { formatINR, formatLakh } from '../utils/formatCurrency'
 import CustomSelect from '../components/ui/CustomSelect'
 import StatusBar from '../components/ui/StatusBar'
+import Icon from '../components/ui/Icon'
 import EmiCalculatorPanel from '../components/calculators/EmiCalculatorPanel'
 import { useAuth } from '../context/AuthContext'
 
@@ -19,31 +20,31 @@ const COST_COLORS = {
 
 const CONDITIONS = [
   {
-    value: 'excellent', label: 'Excellent', icon: '⭐',
+    value: 'excellent', label: 'Excellent', icon: 'star',
     desc: 'No dents or scratches, full service history, single owner — like new.',
     multiplier: '+5%', badge: 'bg-green-100 text-green-700',
     card: { active: 'border-green-500 bg-green-50', text: 'text-green-700' },
   },
   {
-    value: 'good', label: 'Good', icon: '👍',
+    value: 'good', label: 'Good', icon: 'checkCircle',
     desc: 'Minor surface wear, regular maintenance, well kept.',
     multiplier: '±0%', badge: 'bg-blue-100 text-blue-700',
     card: { active: 'border-blue-500 bg-blue-50', text: 'text-blue-700' },
   },
   {
-    value: 'fair', label: 'Fair', icon: '⚠️',
+    value: 'fair', label: 'Fair', icon: 'alertTriangle',
     desc: 'Visible wear, partial service history, minor dents.',
     multiplier: '−15%', badge: 'bg-yellow-100 text-yellow-700',
     card: { active: 'border-yellow-500 bg-yellow-50', text: 'text-yellow-700' },
   },
   {
-    value: 'poor', label: 'Poor', icon: '🔧',
+    value: 'poor', label: 'Poor', icon: 'sliders',
     desc: 'Major dents or rust, skipped services, poor upkeep.',
     multiplier: '−30%', badge: 'bg-orange-100 text-orange-700',
     card: { active: 'border-orange-500 bg-orange-50', text: 'text-orange-700' },
   },
   {
-    value: 'damaged', label: 'Damaged', icon: '💥',
+    value: 'damaged', label: 'Damaged', icon: 'xCircle',
     desc: 'Accident history or structural damage.',
     multiplier: '−50%', badge: 'bg-red-100 text-red-700',
     card: { active: 'border-red-500 bg-red-50', text: 'text-red-700' },
@@ -283,13 +284,13 @@ export default function OwnershipCalculator() {
         </div>
 
         <div className="space-y-4">
-          <StatusBar label="Years of Ownership" icon="📅" min={1} max={10} step={1} value={years} onChange={setYears} format={v => `${v} yr${v > 1 ? 's' : ''}`} unit="yrs" color="bg-primary" />
-          <StatusBar label="Annual Distance" icon="🛣️" min={5000} max={100000} step={1000} value={annualKm} onChange={setAnnualKm} format={v => `${(v / 1000).toFixed(0)}k km`} unit="km/yr" color="bg-accent" />
+          <StatusBar label="Years of Ownership" icon="calendar" min={1} max={10} step={1} value={years} onChange={setYears} format={v => `${v} yr${v > 1 ? 's' : ''}`} unit="yrs" color="bg-primary" />
+          <StatusBar label="Annual Distance" icon="road" min={5000} max={100000} step={1000} value={annualKm} onChange={setAnnualKm} format={v => `${(v / 1000).toFixed(0)}k km`} unit="km/yr" color="bg-accent" />
 
           <div className="bg-gray-50 rounded-xl p-4 border border-border">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-base">⛽</span>
+                <Icon name="fuel" className="w-4 h-4 text-gray-500" />
                 <span className="text-sm font-semibold text-gray-700">
                   Fuel Price
                   {car?.fuel_type === 'Electric' && <span className="ml-1 text-xs text-muted font-normal">(₹/unit)</span>}
@@ -332,7 +333,7 @@ export default function OwnershipCalculator() {
                   : 'border-border bg-white hover:border-gray-300 hover:bg-gray-50'
               }`}
             >
-              <span className="text-xl">{c.icon}</span>
+              <Icon name={c.icon} className={`w-5 h-5 ${condition === c.value ? c.card.text : 'text-gray-500'}`} />
               <span className={`text-xs font-bold ${condition === c.value ? c.card.text : 'text-gray-700'}`}>{c.label}</span>
               <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${c.badge}`}>{c.multiplier}</span>
             </button>
@@ -431,7 +432,7 @@ export default function OwnershipCalculator() {
               <div className="bg-gray-50 border border-border rounded-xl p-4 text-center">
                 <p className="text-xs text-muted font-semibold uppercase tracking-wide mb-1">Standard Resale</p>
                 <p className="text-lg font-display font-bold text-gray-700">{formatLakh(result.standard_resale_value)}</p>
-                <p className="text-[10px] text-muted mt-0.5">IRDAI value at yr {years}</p>
+                <p className="text-[10px] text-muted mt-0.5">{years <= 5 ? 'IRDAI value' : 'Estimated value'} at yr {years}</p>
               </div>
               <div className={`border rounded-xl p-4 text-center ${
                 Number(result.adjusted_resale_value) >= Number(result.standard_resale_value)
@@ -498,7 +499,7 @@ export default function OwnershipCalculator() {
           {depreciation && (
             <div className="bg-white rounded-2xl shadow-card p-6">
               <h3 className="text-base font-display font-semibold text-gray-900 mb-1">Depreciation Schedule</h3>
-              <p className="text-xs text-muted mb-5">IRDAI standard value vs your adjusted value based on condition.</p>
+              <p className="text-xs text-muted mb-5">Standard value (IRDAI schedule through year 5, estimated beyond) vs your adjusted value based on condition.</p>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -537,7 +538,7 @@ export default function OwnershipCalculator() {
                   </tbody>
                 </table>
               </div>
-              <p className="text-xs text-muted mt-4">* Estimates based on IRDAI depreciation rates and condition multipliers. Actual resale value depends on market demand and location.</p>
+              <p className="text-xs text-muted mt-4">* Years 0–5 follow the published IRDAI depreciation schedule; years 6–10 extrapolate the same trend since IRDAI does not publish rates beyond 5 years. Actual resale value depends on market demand and location.</p>
             </div>
           )}
 
@@ -547,7 +548,7 @@ export default function OwnershipCalculator() {
             <p>• Insurance estimated at 2.5% of ex-showroom price per year</p>
             <p>• Fuel cost = (Annual KM ÷ Mileage) × Fuel price</p>
             <p>• Maintenance = annual service cost from manufacturer data</p>
-            <p>• Depreciation follows IRDAI schedule: 15% Year 1, 10% each subsequent year</p>
+            <p>• Depreciation follows the IRDAI schedule through year 5 (15/20/30/40/50%), then an estimated 5% further per year</p>
             <p>• Condition multipliers: Excellent ×1.05 · Good ×1.00 · Fair ×0.85 · Poor ×0.70 · Damaged ×0.50</p>
             <p>• Additional deductions: Accident −15% · Multiple owners −5% · No service records −8%</p>
           </div>
