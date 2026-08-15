@@ -166,22 +166,14 @@ class RecommendRequest(BaseModel):
     priority: str | None = None       # "efficiency" | "low_maintenance"
     use_case: str | None = None       # "city" | "highway" | "family" | "first_car"
     year_preference: str | None = None  # "2020" | "2022"
+    brands: list[str] | None = None       # e.g. ["Honda", "Toyota"]
+    body_type: str | None = None          # "Hatchback" | "Sedan" | "SUV" | "MUV"
     top_n: int = 6
 
 
-class RecommendCarItem(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
-    brand: BrandOut
-    model: str
-    year: int | None
-    fuel_type: str | None
-    transmission: str | None
-    price: Decimal | None
-    mileage: Decimal | None
-    seats: int | None
+class RecommendCarItem(CarListItem):
+    """Same shape as CarListItem, plus service_cost (used in match reasons)."""
     service_cost: Decimal | None
-    image_url: str | None = None
 
 
 class RecommendResult(BaseModel):

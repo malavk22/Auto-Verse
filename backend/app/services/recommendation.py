@@ -1,5 +1,6 @@
 from decimal import Decimal
 from app.schemas.car import RecommendRequest, RecommendResult, RecommendCarItem
+from app.services.body_type import body_type_of
 
 _CITY_FUELS = {"CNG", "Electric"}
 _HIGHWAY_FUELS = {"Diesel"}
@@ -49,6 +50,16 @@ def score_car(car, req: RecommendRequest) -> tuple[int, list[str]]:
     if req.transmission and car.transmission == req.transmission:
         score += 10
         reasons.append(f"{car.transmission} transmission")
+
+    # ── Brand preference ────────────────────────────────────────────────────
+    if req.brands and car.brand is not None and car.brand.name in req.brands:
+        score += 15
+        reasons.append(f"{car.brand.name} — one of your preferred brands")
+
+    # ── Body type preference ────────────────────────────────────────────────
+    if req.body_type and body_type_of(car.model) == req.body_type:
+        score += 15
+        reasons.append(f"{req.body_type} — matches your preference")
 
     # ── Priority bonus ────────────────────────────────────────────────────────
     if req.priority == "efficiency":
