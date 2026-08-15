@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import CompareBar from './components/CompareBar'
 import AuthModal from './components/AuthModal'
@@ -15,6 +15,25 @@ import { CompareProvider } from './context/CompareContext'
 import { AuthProvider } from './context/AuthContext'
 import { FavoritesProvider } from './context/FavoritesContext'
 
+function AnimatedRoutes() {
+  const location = useLocation()
+  return (
+    <div key={location.pathname} className="animate-fade-in">
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/cars" element={<CarListing />} />
+        <Route path="/cars/:id" element={<CarDetail />} />
+        <Route path="/compare" element={<Compare />} />
+        <Route path="/calculator" element={<OwnershipCalculator />} />
+        <Route path="/recommendations" element={<Recommendations />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/favorites" element={<Favorites />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -23,17 +42,7 @@ export default function App() {
           <div className="min-h-screen flex flex-col">
             <Navbar />
             <main className="flex-1 pb-14">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/cars" element={<CarListing />} />
-                <Route path="/cars/:id" element={<CarDetail />} />
-                <Route path="/compare" element={<Compare />} />
-                <Route path="/calculator" element={<OwnershipCalculator />} />
-                <Route path="/recommendations" element={<Recommendations />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/favorites" element={<Favorites />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <AnimatedRoutes />
             </main>
             <CompareBar />
             <AuthModal />
