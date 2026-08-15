@@ -188,7 +188,9 @@ export default function Home() {
       {/* CTA */}
       <section className="py-16 px-4 text-center">
         <h2 className="text-2xl font-display font-semibold text-gray-900 mb-4">Ready to explore?</h2>
-        <p className="text-muted mb-6">Over 10,000 cars from 10 top Indian brands.</p>
+        <p className="text-muted mb-6">
+          Over 10,000 cars{brands.length > 0 ? ` from ${brands.length} Indian brands` : ''}.
+        </p>
         <button
           onClick={() => navigate('/cars')}
           className="bg-primary hover:bg-primary-dark text-white font-semibold px-8 py-3 rounded-lg transition-colors"

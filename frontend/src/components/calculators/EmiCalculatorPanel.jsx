@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { getEmi } from '../../api/calculators'
-import { formatINR, formatLakh } from '../../utils/formatCurrency'
+import { formatINR, formatLakhOrCrore } from '../../utils/formatCurrency'
 import StatusBar from '../ui/StatusBar'
 import { useAuth } from '../../context/AuthContext'
 
@@ -42,6 +42,12 @@ export default function EmiCalculatorPanel({ car }) {
   const principalPct = result ? (Number(result.loan_amount) / Number(result.total_payment)) * 100 : 0
   const interestPct = result ? 100 - principalPct : 0
 
+  // Keep the slider's ceiling above whatever price is actually loaded - a
+  // static ₹1Cr max used to silently clamp the bar (and the value itself,
+  // the moment the slider was touched) whenever a car's on-road price
+  // exceeded it, which now happens for several cars in the dataset.
+  const priceMax = Math.max(20000000, onRoadPrice)
+
   return (
     <>
       {car && (
@@ -59,12 +65,12 @@ export default function EmiCalculatorPanel({ car }) {
       <div className="bg-white rounded-2xl shadow-card p-6 mb-5">
         <h2 className="text-base font-display font-semibold text-gray-900 mb-5">Loan Details</h2>
         <div className="space-y-4">
-          <StatusBar label="On-Road Price" icon="tag" min={100000} max={10000000} step={10000}
+          <StatusBar label="On-Road Price" icon="tag" min={100000} max={priceMax} step={10000}
             value={onRoadPrice} onChange={setOnRoadPrice}
-            format={v => `₹${(v / 100000).toFixed(1)}L`} unit="₹" color="bg-primary" />
+            format={formatLakhOrCrore} unit="₹" color="bg-primary" />
           <StatusBar label="Down Payment" icon="wallet" min={0} max={onRoadPrice} step={5000}
             value={Math.min(downPayment, onRoadPrice)} onChange={setDownPayment}
-            format={v => `₹${(v / 100000).toFixed(1)}L`} unit="₹" color="bg-accent" />
+            format={formatLakhOrCrore} unit="₹" color="bg-accent" />
           <StatusBar label="Interest Rate" icon="trendingUp" min={5} max={20} step={0.1}
             value={interestRate} onChange={setInterestRate}
             format={v => `${v}%`} unit="% p.a." color="bg-purple-500" />
@@ -119,7 +125,7 @@ export default function EmiCalculatorPanel({ car }) {
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 mb-2">Principal</p>
-                <p className="text-lg font-display font-bold text-blue-700">{formatLakh(result.loan_amount)}</p>
+                <p className="text-lg font-display font-bold text-blue-700">{formatLakhOrCrore(result.loan_amount)}</p>
                 <div className="mt-3 h-1.5 bg-white rounded-full overflow-hidden">
                   <div className="h-full bg-blue-500 rounded-full transition-all duration-700" style={{ width: `${principalPct}%` }} />
                 </div>
@@ -127,7 +133,7 @@ export default function EmiCalculatorPanel({ car }) {
               </div>
               <div className="rounded-xl border border-purple-200 bg-purple-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-purple-700 mb-2">Interest</p>
-                <p className="text-lg font-display font-bold text-purple-700">{formatLakh(result.total_interest)}</p>
+                <p className="text-lg font-display font-bold text-purple-700">{formatLakhOrCrore(result.total_interest)}</p>
                 <div className="mt-3 h-1.5 bg-white rounded-full overflow-hidden">
                   <div className="h-full bg-purple-500 rounded-full transition-all duration-700" style={{ width: `${interestPct}%` }} />
                 </div>

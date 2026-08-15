@@ -1,19 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getCar, getCars } from '../api/cars'
-import { formatLakh, formatINR } from '../utils/formatCurrency'
+import { formatLakh, formatLakhOrCrore, formatINR } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
 import { useCompare } from '../context/CompareContext'
 import FavoriteButton from '../components/FavoriteButton'
 import Icon from '../components/ui/Icon'
 import EmptyState from '../components/ui/EmptyState'
-
-const FUEL_COLORS = {
-  Petrol: 'bg-orange-100 text-orange-700',
-  Diesel: 'bg-blue-100 text-blue-700',
-  Electric: 'bg-green-100 text-green-700',
-  CNG: 'bg-teal-100 text-teal-700',
-}
+import FUEL_COLORS from '../utils/fuelColors'
 
 function SpecRow({ label, value }) {
   if (value == null || value === '') return null
@@ -169,7 +163,7 @@ export default function CarDetail() {
             </div>
             <div className="text-right">
               <p className="text-xs text-muted mb-1">Ex-showroom price</p>
-              <p className="text-3xl font-display font-bold text-primary">{formatLakh(car.price)}</p>
+              <p className="text-3xl font-display font-bold text-primary">{formatLakhOrCrore(car.price)}</p>
               <p className="text-sm text-muted">{formatINR(car.price)}</p>
               <div className="flex flex-col gap-2 mt-3">
                 <button
@@ -216,20 +210,22 @@ export default function CarDetail() {
 
           {/* Full spec table */}
           <h2 className="text-lg font-display font-semibold text-gray-900 mb-4">Full Specifications</h2>
-          <table className="w-full">
-            <tbody>
-              <SpecRow label="Brand" value={car.brand.name} />
-              <SpecRow label="Model" value={car.model} />
-              <SpecRow label="Year" value={car.year} />
-              <SpecRow label="Fuel Type" value={car.fuel_type} />
-              <SpecRow label="Transmission" value={car.transmission} />
-              <SpecRow label="Engine" value={car.engine_cc ? `${car.engine_cc} cc` : null} />
-              <SpecRow label="Mileage" value={car.mileage ? `${car.mileage} kmpl` : null} />
-              <SpecRow label="Seating" value={car.seats ? `${car.seats} persons` : null} />
-              <SpecRow label="Ex-showroom" value={formatINR(car.price)} />
-              <SpecRow label="Annual Service" value={car.service_cost ? formatINR(car.service_cost) : null} />
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <tbody>
+                <SpecRow label="Brand" value={car.brand.name} />
+                <SpecRow label="Model" value={car.model} />
+                <SpecRow label="Year" value={car.year} />
+                <SpecRow label="Fuel Type" value={car.fuel_type} />
+                <SpecRow label="Transmission" value={car.transmission} />
+                <SpecRow label="Engine" value={car.engine_cc ? `${car.engine_cc} cc` : null} />
+                <SpecRow label="Mileage" value={car.mileage ? `${car.mileage} kmpl` : null} />
+                <SpecRow label="Seating" value={car.seats ? `${car.seats} persons` : null} />
+                <SpecRow label="Ex-showroom" value={formatINR(car.price)} />
+                <SpecRow label="Annual Service" value={car.service_cost ? formatINR(car.service_cost) : null} />
+              </tbody>
+            </table>
+          </div>
 
           {/* Other years available */}
           {variants.length > 0 && (
@@ -257,7 +253,7 @@ export default function CarDetail() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm font-semibold text-primary mt-2">{formatLakh(v.price)}</p>
+                    <p className="text-sm font-semibold text-primary mt-2">{formatLakhOrCrore(v.price)}</p>
                     {v.mileage && <p className="text-[11px] text-muted">{v.mileage} kmpl</p>}
                   </Link>
                 ))}

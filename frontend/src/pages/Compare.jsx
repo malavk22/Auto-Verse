@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCompare } from '../context/CompareContext'
 import { compareCars } from '../api/cars'
-import { formatINR, formatLakh } from '../utils/formatCurrency'
+import { formatINR, formatLakhOrCrore } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
 import Icon from '../components/ui/Icon'
 import EmptyState from '../components/ui/EmptyState'
@@ -188,7 +188,7 @@ export default function Compare() {
             <div className="p-4 text-center border-b border-border">
               <p className="text-xs text-muted uppercase tracking-wide">{car.brand.name}</p>
               <p className="font-display font-bold text-gray-900 text-lg leading-tight">{car.model}</p>
-              <p className="text-primary font-display font-bold text-xl mt-1">{formatLakh(car.price)}</p>
+              <p className="text-primary font-display font-bold text-xl mt-1">{formatLakhOrCrore(car.price)}</p>
               <Link to={`/cars/${car.id}`} className="text-xs text-primary hover:underline mt-1 inline-block">
                 View details →
               </Link>
@@ -224,7 +224,7 @@ export default function Compare() {
                     <div className="p-4 text-center">
                       <p className="text-xs text-muted uppercase tracking-wide">{car.brand.name}</p>
                       <p className="font-display font-bold text-gray-900 leading-tight mt-0.5">{car.model}</p>
-                      <p className="text-primary font-display font-bold text-lg mt-1">{formatLakh(car.price)}</p>
+                      <p className="text-primary font-display font-bold text-lg mt-1">{formatLakhOrCrore(car.price)}</p>
                       <Link
                         to={`/cars/${car.id}`}
                         className="text-xs text-primary hover:underline mt-1 inline-block"
@@ -305,7 +305,7 @@ export default function Compare() {
                     </div>
                     <Icon name="award" className="w-7 h-7 text-amber-500 shrink-0" />
                   </div>
-                  <p className="font-display font-bold text-teal-700 text-lg mt-1">{formatLakh(winner.price)}</p>
+                  <p className="font-display font-bold text-teal-700 text-lg mt-1">{formatLakhOrCrore(winner.price)}</p>
                   <p className="text-xs text-gray-500 mt-1">
                     Leads in <span className="font-semibold text-teal-700">{wins[winner.id]}</span> of {totalComparable} comparable specs
                     {isTied && ' · wins tie on price'}
