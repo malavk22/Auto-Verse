@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { motion } from 'motion/react'
 import { getRecommendations } from '../api/recommendations'
 import { getFilterOptions } from '../api/cars'
 import { formatLakhOrCrore } from '../utils/formatCurrency'
@@ -7,6 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import Icon from '../components/ui/Icon'
 import EmptyState from '../components/ui/EmptyState'
 import FUEL_COLORS from '../utils/fuelColors'
+import { gridContainer, gridItem } from '../utils/motionVariants'
 
 const FUEL_OPTIONS = ['Petrol', 'Diesel', 'CNG', 'Electric']
 const SEAT_OPTIONS = [4, 5, 6, 7]
@@ -27,8 +29,8 @@ const YEAR_OPTIONS = [
   { value: '2024', label: '2024 & newer', icon: 'bolt' },
 ]
 const BODY_TYPE_OPTIONS = [
-  { value: 'Hatchback', label: 'Hatchback', icon: 'car' },
-  { value: 'Sedan', label: 'Sedan', icon: 'car' },
+  { value: 'Hatchback', label: 'Hatchback', icon: 'hatchback' },
+  { value: 'Sedan', label: 'Sedan', icon: 'sedan' },
   { value: 'SUV', label: 'SUV', icon: 'expand' },
   { value: 'MUV', label: 'MUV', icon: 'users' },
 ]
@@ -36,7 +38,7 @@ const BODY_TYPE_OPTIONS = [
 // Fallback bounds used only until the real price range loads from the API
 // (see priceRange state below) - kept wide so the slider never feels wrong
 // while loading, but the live min/max always wins once fetched.
-const FALLBACK_BUDGET_RANGE = { min: 300000, max: 15000000 }
+const FALLBACK_BUDGET_RANGE = { min: 300000, max: 30000000 }
 
 // Same base bg/text pairing as the shared FUEL_COLORS map, plus a matching
 // border - this page is the only place that outlines the fuel badge.
@@ -49,15 +51,40 @@ const FUEL_BORDERS = {
 const fuelBadgeClass = (fuel) =>
   `${FUEL_COLORS[fuel] ?? 'bg-gray-100 text-gray-600'} ${FUEL_BORDERS[fuel] ?? 'border-gray-200'}`
 
-const SCORE_TIERS = [
-  { min: 90, label: 'Perfect Match',  bg: 'bg-green-100',  text: 'text-green-700',  bar: 'bg-green-500' },
-  { min: 70, label: 'Great Match',    bg: 'bg-blue-100',   text: 'text-blue-700',   bar: 'bg-blue-500'  },
-  { min: 50, label: 'Good Match',     bg: 'bg-yellow-100', text: 'text-yellow-700', bar: 'bg-yellow-500'},
-  { min:  0, label: 'Possible Match', bg: 'bg-gray-100',   text: 'text-gray-600',   bar: 'bg-gray-400'  },
-]
+// Color/label are computed *relative to the other results in this same
+// search* (see `scoreRange` below), not against a fixed universal
+// threshold - fixed thresholds were tried twice and both times fell apart
+// for the same underlying reason: a single search's top 6 results are, by
+// definition, the best matches for that search, so they naturally cluster
+// within a narrow band (verified against real searches - a typical 6-result
+// list spans only ~5 percentage points of the 190-point scale). No matter
+// where a fixed line gets drawn, that tight cluster always lands entirely
+// on one side of it, so every result shows the same badge/color regardless
+// of the *actual* scores involved - which is what kept happening. Ranking
+// each result against the min/max score genuinely present in this result
+// set instead guarantees a real, visible spread every time: the top pick
+// always reads green, the weakest of the shown results always reads
+// redder, regardless of what the absolute scores happen to be.
+//
+// `t` is 0 (weakest result actually shown) to 1 (strongest). Colors are
+// computed continuously (HSL hue 0=red through 120=green) rather than
+// snapped to a handful of fixed swatches, so even results a few points
+// apart within the same rough tier still look visibly different from each
+// other - Tailwind classes can't express a runtime-computed hue, hence
+// inline styles here instead of utility classes.
+function matchColor(t) {
+  const hue = Math.round(t * 120)
+  return {
+    bar: `hsl(${hue} 65% 45%)`,
+    bg: `hsl(${hue} 65% 94%)`,
+    text: `hsl(${hue} 65% 28%)`,
+  }
+}
 
-function scoreTier(score) {
-  return SCORE_TIERS.find(t => score >= t.min) ?? SCORE_TIERS[SCORE_TIERS.length - 1]
+function matchLabel(t) {
+  if (t >= 0.66) return 'Perfect Match'
+  if (t >= 0.33) return 'Great Match'
+  return 'Good Match'
 }
 
 function ChipGroup({ label, options, selected, onToggle, multi = false }) {
@@ -69,11 +96,15 @@ function ChipGroup({ label, options, selected, onToggle, multi = false }) {
           const val = typeof opt === 'object' ? opt.value : opt
           const active = multi ? selected.includes(val) : selected === val
           return (
-            <button
+            <motion.button
               key={val}
               type="button"
               onClick={() => onToggle(val)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full border text-sm font-medium transition-all ${
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.94 }}
+              animate={active ? { scale: [1, 1.06, 1] } : {}}
+              transition={{ duration: 0.25 }}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
                 active
                   ? 'bg-primary text-white border-primary shadow-sm'
                   : 'bg-white border-border text-gray-600 hover:border-primary/60 hover:text-primary'
@@ -81,7 +112,7 @@ function ChipGroup({ label, options, selected, onToggle, multi = false }) {
             >
               {typeof opt === 'object' && opt.icon && <Icon name={opt.icon} className="w-4 h-4" />}
               {typeof opt === 'object' ? opt.label : opt}
-            </button>
+            </motion.button>
           )
         })}
       </div>
@@ -89,27 +120,26 @@ function ChipGroup({ label, options, selected, onToggle, multi = false }) {
   )
 }
 
-function PriceAndScore({ car, tier, align = 'right' }) {
+function PriceAndScore({ car, label, color, align = 'right' }) {
   return (
     <div className={align === 'right' ? 'text-right' : ''}>
       <p className="font-display font-bold text-primary text-base">{formatLakhOrCrore(car.price)}</p>
       {car.mileage && <p className="text-xs text-muted mt-0.5">{car.mileage} km/l</p>}
-      <span className={`mt-2 inline-block text-[11px] font-bold px-2 py-0.5 rounded-full ${tier.bg} ${tier.text}`}>
-        {tier.label}
+      <span
+        className="mt-2 inline-block text-[11px] font-bold px-2 py-0.5 rounded-full"
+        style={{ backgroundColor: color.bg, color: color.text }}
+      >
+        {label}
       </span>
     </div>
   )
 }
 
-function ResultCard({ item, rank }) {
+function ResultCard({ item, rank, scoreRange }) {
   const { car, score, reasons } = item
-  const tier = scoreTier(score)
-  // True ceiling of score_car() in app/services/recommendation.py: 40 (budget)
-  // + 20 (fuel) + 15 (seats) + 10 (mileage baseline) + 15 (service baseline)
-  // + 10 (transmission) + 10 (priority) + 25 (use-case, city/highway) + 15 (year)
-  // + 15 (brand) + 15 (body type) = 190. Update this whenever score_car()'s
-  // possible bonuses change - it's the one place this app makes that assumption.
-  const maxScore = 190
+  const t = scoreRange.max === scoreRange.min ? 1 : (score - scoreRange.min) / (scoreRange.max - scoreRange.min)
+  const color = matchColor(t)
+  const label = matchLabel(t)
   const isTopPick = rank === 1
 
   return (
@@ -167,23 +197,31 @@ function ResultCard({ item, rank }) {
 
           {/* Price + score — desktop only; mobile shows it as a full-width row below instead */}
           <div className="hidden sm:block shrink-0">
-            <PriceAndScore car={car} tier={tier} />
+            <PriceAndScore car={car} label={label} color={color} />
           </div>
         </div>
 
         {/* Price + score — mobile only, since it has no room to sit beside a
             long model name once the image/rank badge also claim space */}
         <div className="sm:hidden mt-3 pt-3 border-t border-border">
-          <PriceAndScore car={car} tier={tier} align="left" />
+          <PriceAndScore car={car} label={label} color={color} align="left" />
         </div>
       </div>
 
-      {/* Score bar */}
+      {/* Score bar - width and color both driven by `t` (this result's
+          position relative to the others actually shown), not the raw
+          score. Floored at 25% rather than running 0-100% so the weakest
+          of the shown results still reads as a real, positive match (it
+          did score above 0 to make this list) rather than looking like
+          "no match" with an empty bar. */}
       <div className="px-4 pb-1">
         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            className={`h-full ${tier.bar} rounded-full transition-all duration-700`}
-            style={{ width: `${Math.min((score / maxScore) * 100, 100)}%` }}
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${25 + t * 75}%` }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+            className="h-full rounded-full"
+            style={{ backgroundColor: color.bar }}
           />
         </div>
       </div>
@@ -216,6 +254,41 @@ function ResultCard({ item, rank }) {
   )
 }
 
+// Mirrors ResultCard's shape (rank badge, image, info, price/score, reason
+// pills) while a search is in flight - same "shaped skeleton" pattern used
+// on Compare/Calculator/Browse Cars, instead of the form just sitting there
+// with only the button's spinner as a sign anything happened.
+function ResultsSkeleton({ count = 6 }) {
+  return (
+    <div className="animate-pulse">
+      <div className="h-5 w-40 bg-gray-200 rounded mb-4" />
+      <div className="space-y-4">
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i} className="bg-white rounded-2xl shadow-card border border-border p-4">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <div className="w-8 h-8 rounded-full bg-gray-200 shrink-0" />
+              <div className="w-16 h-12 sm:w-24 sm:h-16 bg-gray-100 rounded-xl shrink-0" />
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="h-2.5 w-16 bg-gray-100 rounded" />
+                <div className="h-4 w-32 bg-gray-200 rounded" />
+                <div className="h-3 w-24 bg-gray-100 rounded" />
+              </div>
+              <div className="hidden sm:block w-20 space-y-2">
+                <div className="h-4 w-full bg-gray-200 rounded ml-auto" />
+                <div className="h-3 w-14 bg-gray-100 rounded ml-auto" />
+              </div>
+            </div>
+            <div className="flex gap-1.5 mt-4">
+              <div className="h-5 w-24 bg-gray-100 rounded-full" />
+              <div className="h-5 w-20 bg-gray-100 rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Recommendations() {
   const { isAuthenticated, openAuthModal } = useAuth()
   const [budget, setBudget] = useState(1500000)
@@ -235,6 +308,8 @@ export default function Recommendations() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [searched, setSearched] = useState(false)
+  const [searchId, setSearchId] = useState(0)
+  const resultsRef = useRef(null)
 
   // Load the real price range and brand list so the form always reflects
   // every car currently in the dataset, instead of hardcoded values that
@@ -260,6 +335,12 @@ export default function Recommendations() {
     setLoading(true)
     setError(null)
     setSearched(true)
+    // Scroll to the results area right away (skeleton, then real results
+    // once they arrive) rather than waiting for the response - otherwise
+    // clicking "Find My Car" leaves you looking at the same form with only
+    // the button's spinner as a sign anything happened. The timeout gives
+    // the skeleton a tick to actually mount before scrolling to it.
+    setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
     try {
       const data = await getRecommendations({
         budget,
@@ -274,6 +355,7 @@ export default function Recommendations() {
         top_n: 6,
       })
       setResults(data)
+      setSearchId(id => id + 1)
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -456,9 +538,21 @@ export default function Recommendations() {
 
       {error && <p className="mb-5 text-sm text-error text-center">{error}</p>}
 
-      {/* Results */}
-      {results !== null && (
-        <div>
+      {/* Results - scroll-mt accounts for the sticky navbar, same reasoning
+          as the calculators' results scroll target. */}
+      <div ref={resultsRef} className="scroll-mt-20">
+      {loading && <ResultsSkeleton count={6} />}
+
+      {!loading && results !== null && (() => {
+        // The min/max score actually present in *this* result set - see
+        // matchColor's comment above for why coloring against these,
+        // rather than a fixed universal scale, is what actually makes the
+        // results look visually distinguishable from each other.
+        const scoreRange = results.length > 0
+          ? { min: Math.min(...results.map(r => r.score)), max: Math.max(...results.map(r => r.score)) }
+          : { min: 0, max: 0 }
+        return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-display font-semibold text-gray-900">
               {results.length > 0 ? `${results.length} cars matched` : 'No matches found'}
@@ -479,18 +573,22 @@ export default function Recommendations() {
               />
             </div>
           ) : (
-            <div className="space-y-4">
+            <motion.div key={searchId} variants={gridContainer} initial="hidden" animate="show" className="space-y-4">
               {results.map((item, i) => (
-                <ResultCard key={item.car.id} item={item} rank={i + 1} />
+                <motion.div key={item.car.id} variants={gridItem}>
+                  <ResultCard item={item} rank={i + 1} scoreRange={scoreRange} />
+                </motion.div>
               ))}
               <p className="text-xs text-muted text-center pt-2">
                 Scores based on budget fit, fuel type, seating, mileage, and service cost.{' '}
                 <Link to="/cars" className="text-primary hover:underline">Browse all cars →</Link>
               </p>
-            </div>
+            </motion.div>
           )}
-        </div>
-      )}
+        </motion.div>
+        )
+      })()}
+      </div>
     </div>
   )
 }
