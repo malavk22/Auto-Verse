@@ -74,7 +74,7 @@ def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
         user.reset_token_expires = datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_EXPIRE_MINUTES)
         db.commit()
         reset_link = f"{settings.FRONTEND_URL}/reset-password?token={user.reset_token}"
-        send_reset_email(user.email, reset_link)
+        send_reset_email(user.email, reset_link, username=user.username)
     return MessageResponse(message=_GENERIC_RESET_MESSAGE)
 
 
