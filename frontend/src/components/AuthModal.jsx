@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'motion/react'
 import { useAuth } from '../context/AuthContext'
 import { forgotPassword } from '../api/auth'
 import PasswordStrengthBar from './ui/PasswordStrengthBar'
@@ -73,8 +74,6 @@ export default function AuthModal() {
     }
   }, [authModalOpen])
 
-  if (!authModalOpen) return null
-
   const switchTab = (next) => {
     if (next === mode) return
     setMode(next)
@@ -111,10 +110,25 @@ export default function AuthModal() {
   }
 
   return createPortal(
+    <AnimatePresence>
+      {authModalOpen && (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={closeAuthModal} />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={closeAuthModal}
+      />
 
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
+      <motion.div
+        initial={{ opacity: 0, y: 16, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 16, scale: 0.96 }}
+        transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+        className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
+      >
         {/* Gradient header */}
         <div className="relative bg-gradient-to-br from-primary to-primary-dark px-6 pt-6 pb-8 text-center">
           <button
@@ -147,10 +161,17 @@ export default function AuthModal() {
                   key={t.key}
                   type="button"
                   onClick={() => switchTab(t.key)}
-                  className={`flex-1 text-sm font-semibold py-2.5 rounded-lg transition-colors ${
-                    mode === t.key ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  className={`relative isolate flex-1 text-sm font-semibold py-2.5 rounded-lg transition-colors ${
+                    mode === t.key ? 'text-white' : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
+                  {mode === t.key && (
+                    <motion.span
+                      layoutId="auth-tab-pill"
+                      className="absolute inset-0 bg-primary rounded-lg shadow-sm -z-10"
+                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                    />
+                  )}
                   {t.label}
                 </button>
               ))}
@@ -292,8 +313,10 @@ export default function AuthModal() {
             </button>
           </form>
         )}
-      </div>
-    </div>,
+      </motion.div>
+    </div>
+      )}
+    </AnimatePresence>,
     document.body
   )
 }
