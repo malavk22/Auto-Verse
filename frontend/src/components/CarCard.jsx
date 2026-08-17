@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom'
+import { motion } from 'motion/react'
 import { formatLakhOrCrore } from '../utils/formatCurrency'
 import brandImages from '../utils/brandImages'
 import { useCompare } from '../context/CompareContext'
 import FavoriteButton from './FavoriteButton'
 import Icon from './ui/Icon'
 import FUEL_COLORS from '../utils/fuelColors'
+
+const MotionLink = motion.create(Link)
 
 export default function CarCard({ car }) {
   const { isInCompare, addToCompare, removeFromCompare, compareList } = useCompare()
@@ -17,8 +20,11 @@ export default function CarCard({ car }) {
   }
 
   return (
-    <Link
+    <MotionLink
       to={`/cars/${car.id}`}
+      whileHover={{ y: -6 }}
+      whileTap={{ y: -2 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 22 }}
       className="group bg-white rounded-lg shadow-card hover:shadow-card-hover transition-shadow duration-200 overflow-hidden flex flex-col"
     >
       <div className="relative h-44 bg-surface-alt flex items-center justify-center overflow-hidden">
@@ -78,6 +84,6 @@ export default function CarCard({ car }) {
           {inCompare ? '✓ Added to Compare' : '+ Compare'}
         </button>
       </div>
-    </Link>
+    </MotionLink>
   )
 }
