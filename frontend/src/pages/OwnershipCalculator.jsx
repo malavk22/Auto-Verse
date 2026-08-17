@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
+import { motion } from 'motion/react'
 import { getCar, getCars, getFilterOptions } from '../api/cars'
 import { getOwnershipCost, getDepreciation } from '../api/calculators'
-import { formatINR, formatLakh, formatLakhOrCrore } from '../utils/formatCurrency'
+import { formatINR, formatLakhOrCrore } from '../utils/formatCurrency'
 import CustomSelect from '../components/ui/CustomSelect'
 import StatusBar from '../components/ui/StatusBar'
 import Icon from '../components/ui/Icon'
+import Counter from '../components/ui/Counter'
 import EmiCalculatorPanel from '../components/calculators/EmiCalculatorPanel'
 import { useAuth } from '../context/AuthContext'
+import { getRecentlyViewed } from '../utils/recentlyViewed'
 
 const FUEL_DEFAULTS = { Petrol: 103, Diesel: 90, CNG: 85, Electric: 8 }
 
@@ -55,12 +58,45 @@ function CostCard({ label, annual, total, years, color, pct }) {
   return (
     <div className={`rounded-xl border ${color.border} ${color.light} p-4`}>
       <p className={`text-xs font-semibold uppercase tracking-wide ${color.text} mb-2`}>{label}</p>
-      <p className={`text-lg font-display font-bold ${color.text}`}>{formatLakh(annual)}<span className="text-xs font-normal">/yr</span></p>
+      <p className={`text-lg font-display font-bold ${color.text}`}>{formatINR(annual)}<span className="text-xs font-normal">/yr</span></p>
       <p className="text-xs text-muted mt-0.5">{formatINR(total)} over {years} yrs</p>
       <div className="mt-3 h-1.5 bg-white rounded-full overflow-hidden">
-        <div className={`h-full ${color.bg} rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className={`h-full ${color.bg} rounded-full`}
+        />
       </div>
       <p className="text-xs text-muted mt-1 text-right">{pct.toFixed(1)}% of total</p>
+    </div>
+  )
+}
+
+// Mirrors the real results' shape (total banner, resale grid, cost
+// breakdown grid, schedule table) while a calculation is in flight -
+// swapped in via `calculating`, same "shaped skeleton over generic
+// spinner" pattern used on Compare/Browse Cars.
+function OwnershipResultsSkeleton() {
+  return (
+    <div className="space-y-5 animate-pulse">
+      <div className="bg-gray-200 rounded-2xl h-[164px]" />
+      <div className="bg-white rounded-2xl shadow-card p-6">
+        <div className="h-5 w-56 bg-gray-200 rounded mb-4" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[0, 1, 2].map(i => <div key={i} className="h-24 bg-gray-100 rounded-xl" />)}
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl shadow-card p-6">
+        <div className="h-5 w-40 bg-gray-200 rounded mb-4" />
+        <div className="grid grid-cols-2 gap-4">
+          {[0, 1, 2, 3].map(i => <div key={i} className="h-28 bg-gray-100 rounded-xl" />)}
+        </div>
+      </div>
+      <div className="bg-white rounded-2xl shadow-card p-6 space-y-3">
+        <div className="h-5 w-48 bg-gray-200 rounded mb-2" />
+        {[0, 1, 2, 3, 4].map(i => <div key={i} className="h-6 bg-gray-100 rounded" />)}
+      </div>
     </div>
   )
 }
@@ -77,6 +113,9 @@ export default function OwnershipCalculator() {
   const [carLoading, setCarLoading] = useState(false)
   const [brands, setBrands] = useState([])
   const [selectedBrand, setSelectedBrand] = useState('')
+  // Read once on mount - this is a small shortcut row, not the full History
+  // feature, so it doesn't need Home's cross-tab live-sync listeners.
+  const [recentlyViewed] = useState(getRecentlyViewed)
   const [carList, setCarList] = useState([])
   const [carListLoading, setCarListLoading] = useState(false)
 
@@ -84,6 +123,13 @@ export default function OwnershipCalculator() {
   const [years, setYears] = useState(5)
   const [annualKm, setAnnualKm] = useState(15000)
   const [fuelPrice, setFuelPrice] = useState(103)
+  // Local editable draft, decoupled from `fuelPrice` - a plain
+  // `onChange={e => setFuelPrice(Number(e.target.value))}` turns a cleared
+  // field into 0 the instant it's emptied (Number('') === 0), so backspacing
+  // to retype a price showed "0" instead of a truly empty box. Committing
+  // (parsing + clamping) only on blur mirrors the fix in StatusBar.jsx.
+  const [fuelPriceDraft, setFuelPriceDraft] = useState('103')
+  const fuelPriceFocused = useRef(false)
 
   // Condition inputs
   const [condition, setCondition] = useState('good')
@@ -97,13 +143,37 @@ export default function OwnershipCalculator() {
   const [error, setError] = useState(null)
   const resultsRef = useRef(null)
 
+  // Results only ever recompute on an explicit Calculate click - condition,
+  // deduction checkboxes, years, distance, and fuel price can all be
+  // changed freely afterward with no live recalculation, which silently
+  // left the displayed numbers stale with nothing telling you they no
+  // longer matched the current inputs (user-reported: "why does the price
+  // stay the same after changing condition"). `lastCalculatedKeyRef` snapshots
+  // the exact inputs a result was computed from; comparing it against the
+  // *current* inputs on every render gives a cheap, always-correct `isStale`
+  // with no extra effect/state to keep in sync.
+  const lastCalculatedKeyRef = useRef(null)
+  const currentInputsKey = JSON.stringify({ carId: car?.id, years, annualKm, fuelPrice, condition, accidentHistory, multipleOwners, noServiceRecords })
+  const isStale = !!result && lastCalculatedKeyRef.current !== currentInputsKey
+
   useEffect(() => {
     getFilterOptions().then(o => setBrands(o.brands || [])).catch(() => {})
   }, [])
 
   useEffect(() => {
+    if (!fuelPriceFocused.current) setFuelPriceDraft(String(fuelPrice))
+  }, [fuelPrice])
+
+  useEffect(() => {
     if (!urlCarId) return
     setCarLoading(true)
+    // Clears any results already on screen - without this, navigating here
+    // via a *different* car's "Calculate Ownership Cost" link while a
+    // previous car's results were still showing left those stale figures
+    // displayed against the newly-loaded car in Step 1 until Calculate was
+    // clicked again, silently mismatched in the meantime.
+    setResult(null)
+    setDepreciation(null)
     getCar(urlCarId)
       .then(data => { setCar(data); setFuelPrice(FUEL_DEFAULTS[data.fuel_type] ?? 103); setCarLoading(false) })
       .catch(() => setCarLoading(false))
@@ -138,6 +208,7 @@ export default function OwnershipCalculator() {
       ])
       setResult(ownership)
       setDepreciation(dep)
+      lastCalculatedKeyRef.current = currentInputsKey
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
     } catch {
       setError('Failed to calculate. Please try again.')
@@ -215,6 +286,37 @@ export default function OwnershipCalculator() {
           <div className="h-20 bg-gray-100 animate-pulse rounded-xl" />
         ) : (
           <div className="space-y-4">
+            {/* Quick-pick from Recently Viewed - covers the direct-navbar
+                entry path (no car preselected via ?car_id=), which otherwise
+                always started from a blank Brand dropdown even if you were
+                just looking at a car. Deliberately small/optional-looking so
+                it doesn't compete with the primary Brand→Model flow below -
+                just a shortcut, not a second flow. Hidden entirely when
+                there's no history yet (first-time visitor). */}
+            {recentlyViewed.length > 0 && (
+              <div>
+                <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Recently Viewed</label>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {recentlyViewed.slice(0, 6).map(c => (
+                    <button
+                      key={c.id}
+                      onClick={() => selectCar(c)}
+                      className="flex items-center gap-2 shrink-0 border border-border rounded-xl pl-1.5 pr-3 py-1.5 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-lg overflow-hidden bg-surface-alt shrink-0 flex items-center justify-center">
+                        {c.image_url ? (
+                          <img src={c.image_url} alt={c.model} className="w-full h-full object-cover" />
+                        ) : (
+                          <Icon name="car" className="w-4 h-4 text-gray-300" />
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold text-gray-900 whitespace-nowrap">{c.brand.name} {c.model}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Brand</label>
               <CustomSelect
@@ -240,9 +342,16 @@ export default function OwnershipCalculator() {
                       <button
                         key={c.id}
                         onClick={() => selectCar(c)}
-                        className="w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors flex items-center justify-between gap-3"
+                        className="w-full text-left px-4 py-3 hover:bg-primary/5 transition-colors flex items-center gap-3"
                       >
-                        <div>
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-surface-alt shrink-0 flex items-center justify-center">
+                          {c.image_url ? (
+                            <img src={c.image_url} alt={c.model} className="w-full h-full object-cover" />
+                          ) : (
+                            <Icon name="car" className="w-5 h-5 text-gray-300" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
                           <span className="text-sm font-semibold text-gray-900">{c.model}</span>
                           <span className="text-xs text-muted ml-2">{c.year} · {c.fuel_type} · {c.transmission}</span>
                         </div>
@@ -273,16 +382,23 @@ export default function OwnershipCalculator() {
             key={t.key}
             type="button"
             onClick={() => setActiveTab(t.key)}
-            className={`flex-1 text-sm font-semibold py-2.5 rounded-lg transition-colors ${
-              activeTab === t.key ? 'bg-white text-primary shadow-card' : 'text-gray-500 hover:text-gray-700'
+            className={`relative isolate flex-1 text-sm font-semibold py-2.5 rounded-lg transition-colors ${
+              activeTab === t.key ? 'text-primary' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
+            {activeTab === t.key && (
+              <motion.span
+                layoutId="calc-tab-pill"
+                className="absolute inset-0 bg-white rounded-lg shadow-card -z-10"
+                transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+              />
+            )}
             {t.label}
           </button>
         ))}
       </div>
 
-      {activeTab === 'emi' && <EmiCalculatorPanel car={car} />}
+      {activeTab === 'emi' && <EmiCalculatorPanel car={car} onSwitchToOwnership={() => setActiveTab('ownership')} />}
 
       {activeTab === 'ownership' && (<>
 
@@ -312,8 +428,17 @@ export default function OwnershipCalculator() {
             <div className="flex items-center gap-3">
               <span className="text-sm font-bold text-gray-500">₹</span>
               <input
-                type="number" min={1} max={200} value={fuelPrice}
-                onChange={e => setFuelPrice(Number(e.target.value))}
+                type="number" min={1} max={200} value={fuelPriceDraft}
+                onFocus={() => { fuelPriceFocused.current = true }}
+                onChange={e => setFuelPriceDraft(e.target.value)}
+                onBlur={e => {
+                  fuelPriceFocused.current = false
+                  const v = Number(e.target.value)
+                  const clamped = e.target.value === '' || isNaN(v) ? fuelPrice : Math.min(200, Math.max(1, v))
+                  setFuelPrice(clamped)
+                  setFuelPriceDraft(String(clamped))
+                }}
+                onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
                 className="w-28 text-sm border border-border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white font-semibold"
               />
               <span className="text-xs text-muted">Avg: Petrol ₹103 · Diesel ₹90 · CNG ₹85 · EV ₹8/u</span>
@@ -333,11 +458,14 @@ export default function OwnershipCalculator() {
         {/* Condition cards */}
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
           {CONDITIONS.map(c => (
-            <button
+            <motion.button
               key={c.value}
               type="button"
               onClick={() => setCondition(c.value)}
-              className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-all ${
+              whileTap={{ scale: 0.94 }}
+              animate={condition === c.value ? { scale: [1, 1.05, 1] } : {}}
+              transition={{ duration: 0.25 }}
+              className={`flex flex-col items-center gap-1 p-3 rounded-xl border-2 transition-colors ${
                 condition === c.value
                   ? c.card.active
                   : 'border-border bg-white hover:border-gray-300 hover:bg-gray-50'
@@ -346,7 +474,7 @@ export default function OwnershipCalculator() {
               <Icon name={c.icon} className={`w-5 h-5 ${condition === c.value ? c.card.text : 'text-gray-500'}`} />
               <span className={`text-xs font-bold ${condition === c.value ? c.card.text : 'text-gray-700'}`}>{c.label}</span>
               <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${c.badge}`}>{c.multiplier}</span>
-            </button>
+            </motion.button>
           ))}
         </div>
 
@@ -394,7 +522,9 @@ export default function OwnershipCalculator() {
       <button
         onClick={handleCalculate}
         disabled={!car || calculating}
-        className="w-full bg-primary hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm shadow-card mb-5"
+        className={`w-full disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-2xl transition-colors flex items-center justify-center gap-2 text-sm shadow-card mb-5 ${
+          isStale ? 'bg-accent hover:bg-accent-dark' : 'bg-primary hover:bg-primary-dark'
+        }`}
       >
         {calculating ? (
           <>
@@ -404,32 +534,67 @@ export default function OwnershipCalculator() {
             </svg>
             Calculating…
           </>
-        ) : 'Calculate Ownership Cost'}
+        ) : isStale ? 'Recalculate Ownership Cost' : 'Calculate Ownership Cost'}
       </button>
 
       {error && <p className="mb-5 text-sm text-error text-center">{error}</p>}
 
+      {calculating && <OwnershipResultsSkeleton />}
+
       {/* ── Results ──────────────────────────────────────────────────────── */}
-      {result && (
-        <div ref={resultsRef} className="space-y-5">
+      {!calculating && result && (<>
+
+        {isStale && (
+          <div className="mb-5 flex items-center gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+            <Icon name="alertTriangle" className="w-4 h-4 shrink-0" />
+            Inputs changed since this was calculated — the numbers below are from your previous settings. Click "Recalculate" above to update them.
+          </div>
+        )}
+
+        <motion.div
+          ref={resultsRef}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          // scroll-mt accounts for the sticky navbar (h-16) - without it,
+          // scrollIntoView's `block: 'start'` lands this element's top edge
+          // flush with the viewport top, which is *underneath* the sticky
+          // navbar, hiding the "Total cost — ..." label line behind it.
+          // Dimmed while stale, so outdated figures visually read as "old"
+          // even before you've noticed the banner above.
+          className={`space-y-5 scroll-mt-20 transition-opacity ${isStale ? 'opacity-50' : ''}`}
+        >
 
           {/* Total banner */}
           <div className="bg-gradient-to-br from-primary to-primary-dark text-white rounded-2xl p-6">
             <p className="text-sm font-medium text-teal-100 mb-1">
               Total cost — {result.brand} {result.model} · {years} yr{years > 1 ? 's' : ''} · {(annualKm / 1000).toFixed(0)}k km/yr
             </p>
-            <p className="text-4xl font-display font-bold">{formatINR(result.total_ownership_cost)}</p>
+            <p className="text-4xl font-display font-bold"><Counter target={Number(result.total_ownership_cost)} format={formatINR} /></p>
             <div className="flex flex-wrap gap-6 mt-4 text-sm">
               <div>
                 <p className="text-teal-200 text-xs">Per Year</p>
-                <p className="font-semibold">{formatINR(result.cost_per_year)}</p>
+                <p className="font-semibold"><Counter target={Number(result.cost_per_year)} format={formatINR} /></p>
               </div>
               <div>
                 <p className="text-teal-200 text-xs">Per Kilometre</p>
-                <p className="font-semibold">₹{Number(result.cost_per_km).toFixed(2)}/km</p>
+                <p className="font-semibold"><Counter target={Number(result.cost_per_km)} format={v => `₹${v.toFixed(2)}/km`} /></p>
               </div>
             </div>
           </div>
+
+          {/* Cross-link to the other tab - this total doesn't include loan
+              interest at all (it's a cash-purchase running-cost figure), so
+              anyone financing the car is missing a real cost unless they
+              also check the EMI tab. */}
+          <button
+            onClick={() => setActiveTab('emi')}
+            className="w-full flex items-center gap-2.5 text-sm text-gray-700 bg-surface-alt hover:bg-primary/5 border border-border hover:border-primary/30 rounded-xl px-4 py-3 transition-colors text-left"
+          >
+            <Icon name="trendingUp" className="w-4 h-4 text-primary shrink-0" />
+            <span className="flex-1">Financing this car? This total doesn't include loan interest — check the <span className="font-semibold text-primary">Loan EMI</span> tab too.</span>
+            <Icon name="expand" className="w-3.5 h-3.5 text-muted shrink-0" />
+          </button>
 
           {/* Resale value impact */}
           <div className="bg-white rounded-2xl shadow-card p-6">
@@ -562,8 +727,8 @@ export default function OwnershipCalculator() {
             <p>• Condition multipliers: Excellent ×1.05 · Good ×1.00 · Fair ×0.85 · Poor ×0.70 · Damaged ×0.50</p>
             <p>• Additional deductions: Accident −15% · Multiple owners −5% · No service records −8%</p>
           </div>
-        </div>
-      )}
+        </motion.div>
+      </>)}
 
       </>)}
     </div>
