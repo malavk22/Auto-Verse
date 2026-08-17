@@ -65,6 +65,26 @@ class PaginatedCars(BaseModel):
     items: list[CarListItem]
 
 
+class CategoryPreview(BaseModel):
+    car: CarListItem | None
+    model_count: int
+
+
+class HomeHighlights(BaseModel):
+    """Everything Home needs from `cars`, in one round trip.
+
+    Home used to make one full `/cars` list call per section it needed
+    imagery for (trending, one per body-type tile) - each of those fetches
+    every matching row and dedups/groups it in Python, so firing 5+ of
+    them at once on mount queued up behind each other instead of
+    genuinely running in parallel. This endpoint runs the same handful of
+    cheap, LIMIT-bounded queries server-side in a single request instead.
+    """
+    trending: list[CarListItem]
+    categories: dict[str, CategoryPreview]
+    brand_model_counts: dict[str, int]
+
+
 class FilterOptions(BaseModel):
     brands: list[str]
     fuel_types: list[str]
@@ -72,6 +92,7 @@ class FilterOptions(BaseModel):
     seat_options: list[int]
     min_price: Decimal | None
     max_price: Decimal | None
+    model_count: int
 
 
 class FavoriteIdsResponse(BaseModel):
