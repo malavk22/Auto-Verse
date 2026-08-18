@@ -9,7 +9,6 @@ import Icon from '../components/ui/Icon'
 import EmptyState from '../components/ui/EmptyState'
 import FUEL_COLORS from '../utils/fuelColors'
 import { gridContainer, gridItem } from '../utils/motionVariants'
-import useMagnetic from '../hooks/useMagnetic'
 
 const FUEL_OPTIONS = ['Petrol', 'Diesel', 'CNG', 'Electric']
 const SEAT_OPTIONS = [4, 5, 6, 7]
@@ -281,7 +280,6 @@ export default function Recommendations() {
   const [priority, setPriority] = useState(null)
   const [useCase, setUseCase] = useState(null)
   const [yearPref, setYearPref] = useState(null)
-  const findBtnMagnetic = useMagnetic()
   const [brandPref, setBrandPref] = useState([])
   const [bodyType, setBodyType] = useState(null)
   const [brandOptions, setBrandOptions] = useState([])
@@ -487,13 +485,9 @@ export default function Recommendations() {
 
         {/* Actions */}
         <div className="flex gap-3 pt-2">
-          <motion.button
-            ref={findBtnMagnetic.ref}
+          <button
             onClick={handleFind}
             disabled={loading}
-            style={findBtnMagnetic.style}
-            onMouseMove={findBtnMagnetic.onMouseMove}
-            onMouseLeave={findBtnMagnetic.onMouseLeave}
             className="flex-1 bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-card"
           >
             {loading ? (
@@ -510,7 +504,7 @@ export default function Recommendations() {
                 Find My Car
               </>
             )}
-          </motion.button>
+          </button>
           {searched && (
             <button
               onClick={handleReset}
