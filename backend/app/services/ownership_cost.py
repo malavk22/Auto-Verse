@@ -30,6 +30,9 @@ def calculate_ownership(
     irdai_pct = Decimal(str(IRDAI_RATES.get(yr_key, 25))) / Decimal("100")
     standard_resale = price * irdai_pct
     adjusted_resale = standard_resale * cond_mult
+    # Deliberately uses standard resale, not condition-adjusted - "Total
+    # Cost" stays condition-independent by design. Condition's effect shows
+    # separately in the "Condition Impact on Resale Value" card instead.
     total_depreciation = price - standard_resale
 
     total_ownership = (annual_fuel + annual_insurance + annual_maintenance) * years + total_depreciation
