@@ -1,24 +1,10 @@
 """
-Update script: fills in real multi-photo galleries for the 10 models that
-were stuck with a single Wikipedia Commons photo left over from the
-original 10,000-row dataset (before the later expansion started sourcing
-proper CarDekho exterior/interior galleries per model).
+Fills in real multi-photo CarDekho galleries for 10 models stuck with a
+single leftover Wikipedia photo from the original dataset. All URLs
+verified to resolve. Updates existing rows by brand+model (doesn't insert
+new cars, unlike seed_new_cars.py).
 
-All URLs below were pulled from each model's actual CarDekho photo gallery
-page and verified to resolve (HTTP 200) before being added here. One
-exception: Renault Lodgy only has a single real photo on CarDekho at all -
-it's a long-discontinued model there, not a gap in this script.
-
-Hyundai i10 note: CarDekho's own "i10" page has only one photo (also a
-thin, mostly-discontinued listing there) - the same generation the dataset
-already shows (per the original Wikipedia photo, "i10 (III)") is sold in
-India as the Grand i10 Nios, which has a full real gallery, so that's used
-instead of a bare single photo.
-
-Updates existing rows (by brand+model) rather than inserting new ones -
-unlike seed_new_cars.py, which adds cars that don't exist yet.
-
-Usage (from backend/, with the venv active and DATABASE_URL configured):
+Usage (from backend/, venv active, DATABASE_URL configured):
     python scripts/update_galleries.py
 """
 import json

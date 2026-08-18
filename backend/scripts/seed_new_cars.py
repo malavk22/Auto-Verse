@@ -1,26 +1,12 @@
 """
-Seed script: adds real 2024/2025/2026 India-market car listings that were
-missing from the original 10,000-row dataset - both brand-new brands
-(MG, Citroen, Jeep, Nissan, BYD, Mercedes-Benz, BMW, Audi, Volvo, Land
-Rover, Jaguar, Lexus, Porsche, MINI) and additional recent models for
-brands already present, so each brand's lineup isn't just one flagship
-car (e.g. Audi previously only had the Q3; it now also has Q5, A4, A6).
+Seed script: adds real 2024-2026 India-market cars missing from the
+original dataset - new brands (MG, Citroen, Jeep, BYD, Mercedes-Benz, BMW,
+Audi, Volvo, Land Rover, Jaguar, Lexus, Porsche, MINI, etc.) plus more
+models for brands that only had one flagship car. All confirmed currently
+on sale via CarDekho/Autocar/Team-BHP; missing specs left as None rather
+than guessed. Idempotent - skips existing (brand, model, year) rows.
 
-Every car below is confirmed currently on sale in India (researched via
-CarDekho / Autocar India / Team-BHP current pricing pages, not historical
-data - e.g. Volvo XC40 is deliberately excluded because it's discontinued
-in India, unlike XC60/EX30 which are still sold). Images are real
-CarDekho exterior/interior photos, verified while researching each car.
-
-Where a spec (mileage, engine displacement) wasn't explicitly stated by
-the source, it's left as None rather than guessed - accuracy matters more
-here than a complete-looking row (see the IRDAI depreciation fix earlier
-in this project for why).
-
-Idempotent: running this multiple times will not create duplicate rows,
-it skips any (brand, model, year) combination that already exists.
-
-Usage (from backend/, with the venv active and DATABASE_URL configured):
+Usage (from backend/, venv active, DATABASE_URL configured):
     python scripts/seed_new_cars.py
 """
 import json

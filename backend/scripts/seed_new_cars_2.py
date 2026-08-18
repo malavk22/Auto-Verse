@@ -1,33 +1,12 @@
 """
-Second expansion batch: fills out the thinnest existing brand lineups
-(Jaguar was checked and skipped - see below) and adds two new brands that
-cover segments nothing else in the dataset does (Isuzu = pickup trucks,
-Force Motors = hardcore off-roader/premium van).
+Second expansion batch: fills out thin brand lineups and adds Isuzu
+(pickups) and Force Motors (off-roaders). All confirmed currently on sale
+via CarDekho (checked 2026-08-17) - e.g. Volvo's EC40 used instead of the
+discontinued XC40, Jaguar got nothing added since its remaining candidates
+(F-Type, XF) are both discontinued. Same missing-spec and idempotency
+policy as seed_new_cars.py.
 
-Every car below is confirmed currently on sale in India (CarDekho, checked
-2026-08-17) - several near-misses were caught and corrected during
-research, not just assumed from a first search pass:
-  - Volvo XC40 is discontinued (Nov 2023); its real successor, the EC40
-    (formerly C40 Recharge), is used instead.
-  - Isuzu's old combined "D-Max V-Cross" nameplate is discontinued (May
-    2021); the current lineup sells them as separate models - "V-Cross"
-    (updated Feb 2026) and "D-Max" are now distinct. V-Cross + MU-X used
-    here as the two most representative/recognizable current models.
-  - Jaguar was evaluated for 2 more models (F-Type, XF) - both are
-    confirmed discontinued (Nov 2024 and Jul 2023 respectively), so
-    Jaguar gets nothing added here rather than an inaccurate entry.
-  - Nissan and Jeep each only had 1 more genuinely current model to add
-    (Gravite, Grand Cherokee) rather than the planned 2 - their real
-    lineups in India are just that small.
-
-Where a spec (mileage, service cost) wasn't explicitly published by the
-source, it's estimated or left as None rather than guessed with false
-precision - same policy as seed_new_cars.py.
-
-Idempotent: running this multiple times will not create duplicate rows,
-it skips any (brand, model, year) combination that already exists.
-
-Usage (from backend/, with the venv active and DATABASE_URL configured):
+Usage (from backend/, venv active, DATABASE_URL configured):
     python -m scripts.seed_new_cars_2
 """
 import json

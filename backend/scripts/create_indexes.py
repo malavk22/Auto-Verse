@@ -1,22 +1,10 @@
 """
-Creates the non-clustered indexes the `cars` table needs but doesn't get
-from the SQLAlchemy models (SQLAlchemy only auto-creates PKs/FKs on
-`Base.metadata.create_all()`, never secondary indexes).
+Creates the non-clustered index Browse Cars needs (filter on is_active,
+sort by year) - SQLAlchemy only auto-creates PKs/FKs, not this. Without
+it, that query was intermittently taking ~47s instead of ~1s. Idempotent,
+safe to re-run.
 
-Without this, `cars` has only its clustered PK (on `id`). Every Browse
-Cars request filters on `is_active` and sorts by `year` (the default
-sort, and the fallback for unrecognized `sort` values) - with no
-supporting index, SQL Server has to do a full clustered-index scan +
-sort for that shape of query, and was intermittently landing on a very
-badly-costed plan for it (~47s instead of ~1s). Adding this index was
-what actually fixed that; this script just makes the fix reproducible
-if the database is ever rebuilt from scratch, instead of only existing
-as a manual change against the live DB.
-
-Idempotent: skips creation if the index already exists, so it's safe to
-run again (e.g. as a post-seed step) without erroring.
-
-Usage (from backend/, with the venv active and DATABASE_URL configured):
+Usage (from backend/, venv active, DATABASE_URL configured):
     python -m scripts.create_indexes
 """
 from sqlalchemy import text
