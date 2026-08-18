@@ -2,12 +2,23 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy import text
 
 from app.database import Base, engine, settings
+from app.rate_limit import limiter
 from app.routers import cars, calculators, recommendations, auth, favorites
 
 app = FastAPI(title="AutoVerse API", version="1.0.0")
+
+# Only the auth router actually sets per-route limits (see routers/auth.py) -
+# login/register/password-reset are the endpoints worth throttling against
+# brute-force and email-spam abuse. Everything else stays unlimited.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
