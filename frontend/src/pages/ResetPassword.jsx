@@ -3,6 +3,9 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { resetPassword } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 import PasswordStrengthBar from '../components/ui/PasswordStrengthBar'
+import PasswordField from '../components/ui/PasswordField'
+import AuthHeader from '../components/ui/AuthHeader'
+import FormError from '../components/ui/FormError'
 import EmptyState from '../components/ui/EmptyState'
 
 export default function ResetPassword() {
@@ -15,6 +18,9 @@ export default function ResetPassword() {
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+
+  const confirmTouched = confirmPassword.length > 0
+  const passwordsMatch = confirmTouched && password === confirmPassword
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -52,13 +58,7 @@ export default function ResetPassword() {
   return (
     <div className="max-w-sm mx-auto px-4 py-20">
       <div className="bg-white rounded-2xl shadow-card overflow-hidden">
-        <div className="bg-gradient-to-br from-primary to-primary-dark px-6 pt-6 pb-8 text-center">
-          <div className="flex items-center justify-center gap-1 mb-1.5">
-            <span className="text-2xl font-display font-bold text-white">Auto</span>
-            <span className="text-2xl font-display font-bold text-accent">Verse</span>
-          </div>
-          <p className="text-sm text-teal-100/90">Set a new password</p>
-        </div>
+        <AuthHeader subtitle="Set a new password" />
 
         <div className="p-6">
           {done ? (
@@ -80,35 +80,45 @@ export default function ResetPassword() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">New Password</label>
-                <input
-                  type="password"
+                <PasswordField
+                  label="New Password"
                   required
                   minLength={6}
+                  autoComplete="new-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full text-sm border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white transition-colors"
                   placeholder="••••••••"
                 />
                 <PasswordStrengthBar password={password} />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Confirm New Password</label>
-                <input
-                  type="password"
+                <PasswordField
+                  label="Confirm New Password"
                   required
                   minLength={6}
+                  autoComplete="new-password"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
-                  className="w-full text-sm border border-border rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white transition-colors"
                   placeholder="••••••••"
                 />
+                {confirmTouched && (
+                  <p className={`mt-1.5 text-xs font-medium flex items-center gap-1 ${passwordsMatch ? 'text-success' : 'text-error'}`}>
+                    {passwordsMatch ? (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    )}
+                    {passwordsMatch ? 'Passwords match' : "Passwords don't match"}
+                  </p>
+                )}
               </div>
 
-              {error && (
-                <p className="text-sm text-error bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
-              )}
+              <FormError message={error} />
 
               <button
                 type="submit"
