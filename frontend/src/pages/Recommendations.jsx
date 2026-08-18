@@ -9,6 +9,7 @@ import Icon from '../components/ui/Icon'
 import EmptyState from '../components/ui/EmptyState'
 import FUEL_COLORS from '../utils/fuelColors'
 import { gridContainer, gridItem } from '../utils/motionVariants'
+import useMagnetic from '../hooks/useMagnetic'
 
 const FUEL_OPTIONS = ['Petrol', 'Diesel', 'CNG', 'Electric']
 const SEAT_OPTIONS = [4, 5, 6, 7]
@@ -51,27 +52,11 @@ const FUEL_BORDERS = {
 const fuelBadgeClass = (fuel) =>
   `${FUEL_COLORS[fuel] ?? 'bg-gray-100 text-gray-600'} ${FUEL_BORDERS[fuel] ?? 'border-gray-200'}`
 
-// Color/label are computed *relative to the other results in this same
-// search* (see `scoreRange` below), not against a fixed universal
-// threshold - fixed thresholds were tried twice and both times fell apart
-// for the same underlying reason: a single search's top 6 results are, by
-// definition, the best matches for that search, so they naturally cluster
-// within a narrow band (verified against real searches - a typical 6-result
-// list spans only ~5 percentage points of the 190-point scale). No matter
-// where a fixed line gets drawn, that tight cluster always lands entirely
-// on one side of it, so every result shows the same badge/color regardless
-// of the *actual* scores involved - which is what kept happening. Ranking
-// each result against the min/max score genuinely present in this result
-// set instead guarantees a real, visible spread every time: the top pick
-// always reads green, the weakest of the shown results always reads
-// redder, regardless of what the absolute scores happen to be.
-//
-// `t` is 0 (weakest result actually shown) to 1 (strongest). Colors are
-// computed continuously (HSL hue 0=red through 120=green) rather than
-// snapped to a handful of fixed swatches, so even results a few points
-// apart within the same rough tier still look visibly different from each
-// other - Tailwind classes can't express a runtime-computed hue, hence
-// inline styles here instead of utility classes.
+// Color/label are relative to the other results in *this* search (see
+// `scoreRange`), not a fixed threshold - a single search's top 6 results
+// naturally cluster too tightly for any fixed line to tell them apart.
+// `t` is 0 (weakest shown) to 1 (strongest); hue is continuous (red→green)
+// instead of snapped to a few swatches, so close scores still look distinct.
 function matchColor(t) {
   const hue = Math.round(t * 120)
   return {
@@ -208,12 +193,8 @@ function ResultCard({ item, rank, scoreRange }) {
         </div>
       </div>
 
-      {/* Score bar - width and color both driven by `t` (this result's
-          position relative to the others actually shown), not the raw
-          score. Floored at 25% rather than running 0-100% so the weakest
-          of the shown results still reads as a real, positive match (it
-          did score above 0 to make this list) rather than looking like
-          "no match" with an empty bar. */}
+      {/* Bar width/color both driven by `t`, floored at 25% so the
+          weakest shown result still reads as a real match, not empty. */}
       <div className="px-4 pb-1">
         <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
           <motion.div
@@ -300,6 +281,7 @@ export default function Recommendations() {
   const [priority, setPriority] = useState(null)
   const [useCase, setUseCase] = useState(null)
   const [yearPref, setYearPref] = useState(null)
+  const findBtnMagnetic = useMagnetic()
   const [brandPref, setBrandPref] = useState([])
   const [bodyType, setBodyType] = useState(null)
   const [brandOptions, setBrandOptions] = useState([])
@@ -505,9 +487,13 @@ export default function Recommendations() {
 
         {/* Actions */}
         <div className="flex gap-3 pt-2">
-          <button
+          <motion.button
+            ref={findBtnMagnetic.ref}
             onClick={handleFind}
             disabled={loading}
+            style={findBtnMagnetic.style}
+            onMouseMove={findBtnMagnetic.onMouseMove}
+            onMouseLeave={findBtnMagnetic.onMouseLeave}
             className="flex-1 bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-card"
           >
             {loading ? (
@@ -524,7 +510,7 @@ export default function Recommendations() {
                 Find My Car
               </>
             )}
-          </button>
+          </motion.button>
           {searched && (
             <button
               onClick={handleReset}
