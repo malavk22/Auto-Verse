@@ -48,15 +48,10 @@ export default function EmiCalculatorPanel({ car, onSwitchToOwnership }) {
     setResult(null)
   }, [car?.id])
 
-  // Down Payment's slider/input already clamps its *displayed* value to
-  // onRoadPrice (via `Math.min(downPayment, onRoadPrice)` below), but the
-  // underlying `downPayment` state doesn't shrink on its own - so raising it
-  // near the ceiling, then lowering On-Road Price afterward without
-  // re-touching Down Payment, left the real state above the new price while
-  // the UI showed a valid clamped number. "Calculate EMI" would silently
-  // stay disabled (`downPayment > onRoadPrice` below) with no visible reason
-  // why, since what was on screen looked fine. Clamping here keeps the two
-  // in sync as soon as the price changes, not just cosmetically.
+  // The displayed value already clamps to onRoadPrice below, but the
+  // underlying state doesn't shrink on its own - lowering the price after
+  // raising Down Payment near the ceiling left "Calculate" silently
+  // disabled with no visible reason why. Clamp the real state too.
   const handleOnRoadPriceChange = (v) => {
     setOnRoadPrice(v)
     setDownPayment(dp => Math.min(dp, v))
