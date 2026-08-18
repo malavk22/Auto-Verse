@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react'
 import Icon from './Icon'
 
 // Indian-style comma grouping (last 3 digits, then pairs): 581900 -> 5,81,900
@@ -16,11 +17,26 @@ function formatGrouped(value) {
 export default function StatusBar({ label, icon, min, max, step, value, onChange, format, unit, color = 'bg-primary' }) {
   const pct = Math.round(((Math.min(value, max) - min) / (max - min)) * 100)
 
-  const handleInput = (raw) => {
+  // Edits its own local draft, committing (parse + clamp) only on
+  // blur/Enter - deriving straight from `value` every keystroke used to
+  // snap a cleared field instantly back to the last valid number.
+  const [draft, setDraft] = useState(() => formatGrouped(value))
+  const focused = useRef(false)
+
+  useEffect(() => {
+    if (!focused.current) setDraft(formatGrouped(value))
+  }, [value])
+
+  const commit = (raw) => {
     const cleaned = raw.replace(/,/g, '')
     const v = Number(cleaned)
-    if (isNaN(v) || cleaned === '') return
-    onChange(Math.min(max, Math.max(min, v)))
+    if (cleaned === '' || isNaN(v)) {
+      setDraft(formatGrouped(value))
+      return
+    }
+    const clamped = Math.min(max, Math.max(min, v))
+    onChange(clamped)
+    setDraft(formatGrouped(clamped))
   }
 
   return (
@@ -34,9 +50,11 @@ export default function StatusBar({ label, icon, min, max, step, value, onChange
           <input
             type="text"
             inputMode="decimal"
-            value={formatGrouped(value)}
-            onChange={e => handleInput(e.target.value)}
-            onBlur={e => handleInput(e.target.value)}
+            value={draft}
+            onFocus={() => { focused.current = true }}
+            onChange={e => setDraft(e.target.value)}
+            onBlur={e => { focused.current = false; commit(e.target.value) }}
+            onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur() }}
             className="w-28 text-sm font-bold text-primary text-center bg-primary/10 border border-primary/20 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:bg-white"
           />
           {unit && <span className="text-xs text-muted">{unit}</span>}
