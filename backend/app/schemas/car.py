@@ -199,7 +199,9 @@ class RecommendCarItem(CarListItem):
 
 class RecommendResult(BaseModel):
     car: RecommendCarItem
-    score: int
+    # float, not int - carries a small tiebreak (see recommend_cars()) so
+    # cars tied on the coarse score still get distinct match-bar fills.
+    score: float
     reasons: list[str]
 
 
