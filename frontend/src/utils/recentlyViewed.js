@@ -1,6 +1,5 @@
 // Tracks the last few cars a visitor opened, purely client-side via
-// localStorage - no login, no server round-trip. Home shows a small teaser
-// (capped further there) and links to the full /history page for the rest.
+// localStorage - no login, no server round-trip.
 const KEY = 'autoverse_recently_viewed'
 const MAX = 20
 
