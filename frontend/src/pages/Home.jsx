@@ -8,6 +8,7 @@ import { gridContainer, gridItem } from '../utils/motionVariants'
 import Icon from '../components/ui/Icon'
 import HorizontalScroller from '../components/ui/HorizontalScroller'
 import BackToTopButton from '../components/ui/BackToTopButton'
+import Counter from '../components/ui/Counter'
 import CarCard from '../components/CarCard'
 import { getRecentlyViewed } from '../utils/recentlyViewed'
 
@@ -30,47 +31,6 @@ const CATEGORIES = [
   { bodyType: 'Hatchback', label: 'Hatchbacks',  desc: 'Easy to park, easy on fuel' },
   { bodyType: 'MUV',       label: 'Family MUVs', desc: '7-seaters built for road trips' },
 ]
-
-// Counts up from 0 to `target` once the number scrolls into view. Waits for
-// both "in view" and a truthy target before starting, since `target` often
-// arrives asynchronously (brand/filter counts load after mount) and can
-// still be 0 at the moment the viewport-enter fires.
-//
-// `format`, if given, replaces the plain toLocaleString()+suffix display -
-// e.g. formatLakhOrCrore, so a rupee amount counts up through "₹4.31 L"
-// rather than as a raw integer (it can even cross the L→Cr unit boundary
-// mid-count for a large target, which just reads like an odometer flipping
-// over rather than looking broken).
-function Counter({ target, suffix = '', format }) {
-  const [value, setValue] = useState(0)
-  const [inView, setInView] = useState(false)
-  const started = useRef(false)
-
-  useEffect(() => {
-    if (!inView || !target || started.current) return
-    started.current = true
-    const duration = 1200
-    const start = performance.now()
-    let raf
-    const tick = (now) => {
-      const p = Math.min((now - start) / duration, 1)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setValue(target * eased)
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [inView, target])
-
-  if (!target) {
-    return <motion.span onViewportEnter={() => setInView(true)} viewport={{ once: true, margin: '-40px' }}>—</motion.span>
-  }
-  return (
-    <motion.span onViewportEnter={() => setInView(true)} viewport={{ once: true, margin: '-40px' }}>
-      {format ? format(value) : `${Math.round(value).toLocaleString()}${suffix}`}
-    </motion.span>
-  )
-}
 
 // Rank badge for the Trending strip - top 3 get an accent "hot" treatment
 // (flame icon, gradient fill), the rest a plain numbered pill.
@@ -169,19 +129,38 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-    getBrands().then(setBrands).catch(() => {})
-    getFilterOptions().then(setFilterOptions).catch(() => {})
+    let cancelled = false
+
+    // A plain `.catch(() => {})` used to leave the stat capsule/brand data
+    // stuck empty forever on any single failure. Retries up to 2 times
+    // with a growing delay (2s, 5s) - a single retry could still land in
+    // the same slow patch as the first attempt. `cancelled` avoids setting
+    // state after this Home instance has already unmounted.
+    const loadWithRetry = (fetcher, onSuccess, attempt = 0) => {
+      fetcher().then(data => { if (!cancelled) onSuccess(data) }).catch(() => {
+        if (attempt >= 2) return
+        setTimeout(() => {
+          if (cancelled) return
+          loadWithRetry(fetcher, onSuccess, attempt + 1)
+        }, attempt === 0 ? 2000 : 5000)
+      })
+    }
+
+    loadWithRetry(getBrands, setBrands)
+    loadWithRetry(getFilterOptions, setFilterOptions)
 
     // Trending strip + "Shop by Body Type" tile photos, in one request -
     // see HomeHighlights on the backend for why this isn't several
-    // separate /cars calls.
-    getHomeHighlights()
-      .then(data => {
-        setTrending(data.trending || [])
-        setCategoryCars(data.categories || {})
-        setBrandCounts(data.brand_model_counts || {})
-      })
-      .catch(() => {})
+    // separate /cars calls. Previously had no retry at all (a single
+    // failure left this permanently blank) - now shares the same
+    // resilience as brands/filter options above.
+    loadWithRetry(getHomeHighlights, data => {
+      setTrending(data.trending || [])
+      setCategoryCars(data.categories || {})
+      setBrandCounts(data.brand_model_counts || {})
+    })
+
+    return () => { cancelled = true }
   }, [])
 
   // Debounced autocomplete fetch
@@ -226,16 +205,9 @@ export default function Home() {
 
   return (
     <div>
-      {/* Hero — a flat, confident 2-stop teal gradient. (Tried a busier
-          multi-stop "aurora" version with blobs/grain/blend-modes first;
-          it read as too busy, so this stays deliberately simple - just a
-          wider lightness gap than the original from-primary/to-primary-dark
-          pair, which was too close in tone to read as a gradient at all.)
-          No `overflow-hidden` here - it was clipping the search
-          autocomplete dropdown below whenever it had enough suggestions to
-          extend past the hero's own bottom edge (nothing left inside this
-          section actually needs clipping since the blobs/grain were
-          already removed). */}
+      {/* Hero — a flat 2-stop teal gradient (a busier multi-blob version
+          was tried and reverted, read as too busy). No `overflow-hidden`
+          here - it was clipping the search autocomplete dropdown. */}
       <section className="relative bg-gradient-to-br from-primary to-[#0B4A4A] text-white py-20 px-4">
         <motion.div
           className="relative max-w-3xl mx-auto text-center"
@@ -248,7 +220,7 @@ export default function Home() {
             <span className="text-accent">in India's Market</span>
           </motion.h1>
           <motion.p variants={heroItem} className="text-lg text-teal-100 mb-10">
-            Browse 97+ models · Compare specs · Calculate true ownership cost
+            Browse {filterOptions.model_count || 100}+ models · Compare specs · Calculate true ownership cost
           </motion.p>
 
           {/* Search with autocomplete */}
@@ -265,9 +237,10 @@ export default function Home() {
               />
               <motion.button
                 type="submit"
+                disabled={!search.trim()}
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.96 }}
-                className="bg-accent hover:bg-accent-dark text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm whitespace-nowrap"
+                className="bg-accent hover:bg-accent-dark disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-lg transition-colors text-sm whitespace-nowrap"
               >
                 Search
               </motion.button>
@@ -343,22 +316,22 @@ export default function Home() {
         >
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-6 sm:divide-x-2 sm:divide-primary/15">
             <StatItem icon="car" label="Car Listings" delay={0}>
-              <Counter target={10000} suffix="+" />
+              <Counter target={10000} suffix="+" triggerOnView />
             </StatItem>
             <StatItem icon="building" label="Brands" delay={0.08}>
-              <Counter target={brands.length} />
+              <Counter target={brands.length} triggerOnView />
             </StatItem>
             <StatItem icon="fuel" label="Fuel Types" delay={0.16}>
-              <Counter target={filterOptions.fuel_types?.length || 0} />
+              <Counter target={filterOptions.fuel_types?.length || 0} triggerOnView />
             </StatItem>
             <StatItem icon="tag" label="Price Range" delay={0.24} small>
               {filterOptions.min_price ? (
                 // Each value wrapped so it can only ever break at the dash
                 // (if it must break at all) - never inside "₹1.36 Cr".
                 <span className="inline-flex flex-wrap items-baseline justify-center gap-x-1">
-                  <span className="whitespace-nowrap"><Counter target={Number(filterOptions.min_price)} format={formatLakhOrCrore} /></span>
+                  <span className="whitespace-nowrap"><Counter target={Number(filterOptions.min_price)} format={formatLakhOrCrore} triggerOnView /></span>
                   <span>–</span>
-                  <span className="whitespace-nowrap"><Counter target={Number(filterOptions.max_price)} format={formatLakhOrCrore} /></span>
+                  <span className="whitespace-nowrap"><Counter target={Number(filterOptions.max_price)} format={formatLakhOrCrore} triggerOnView /></span>
                 </span>
               ) : '—'}
             </StatItem>
@@ -367,15 +340,9 @@ export default function Home() {
       </section>
 
       {/* Recently Visited - purely client-side (localStorage), no login
-          needed. Placed after Stats rather than right against the hero's
-          dark edge, which read as abrupt with nothing framing it. Fixed to
-          a small non-scrolling row (4 cards, a plain grid instead of
-          HorizontalScroller) rather than letting the list grow sideways
-          forever - past 4, "View all" routes to the dedicated /history
-          page instead of piling more cards into a page that's already
-          doing a lot. Kept lighter than Trending Cars below (smaller
-          heading, no banded background) so it stays a quick personal
-          shortcut, not another full marketing section. */}
+          needed. Fixed to a small 4-card non-scrolling row; "View all"
+          routes to /history for the rest. Kept lighter than Trending
+          below so it reads as a quick shortcut, not another section. */}
       {recentlyViewed.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12">
           <Reveal className="flex items-center justify-between mb-4">
@@ -587,7 +554,7 @@ export default function Home() {
         <Reveal>
           <h2 className="text-3xl font-display font-bold mb-3">Ready to find your perfect car?</h2>
           <p className="text-teal-100 mb-8">
-            Over 10,000 listings{brands.length > 0 ? ` · ${brands.length} brands` : ''} · 97 models — all in one place.
+            Over 10,000 listings{brands.length > 0 ? ` · ${brands.length} brands` : ''}{filterOptions.model_count ? ` · ${filterOptions.model_count} models` : ''} — all in one place.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <motion.button
