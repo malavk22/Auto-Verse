@@ -21,17 +21,10 @@ import { FavoritesProvider } from './context/FavoritesContext'
 function AnimatedRoutes() {
   const location = useLocation()
 
-  // React Router doesn't reset scroll position on navigation the way a
-  // real page load would - a link clicked from partway down a scrolled
-  // page (e.g. a car card near the bottom of Browse Cars) would otherwise
-  // open the new page still scrolled to that same pixel offset, since the
-  // browser just keeps whatever scrollY it already had.
-  //
-  // `behavior: 'instant'` is required here, not just `window.scrollTo(0, 0)`
-  // - the <html> element has global `scroll-behavior: smooth` CSS (used
-  // intentionally elsewhere, e.g. the EMI calculator scrolling to its
-  // results), which would otherwise make this animate smoothly back to top
-  // over time instead of snapping there immediately like a real page load.
+  // React Router doesn't reset scroll on navigation the way a real page
+  // load would. `behavior: 'instant'` matters here, not just scrollTo(0,0)
+  // - the <html> has global smooth-scroll CSS that would otherwise animate
+  // this instead of snapping immediately.
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [location.pathname])
