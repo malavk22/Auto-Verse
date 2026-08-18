@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 import jwt
 
 from app.database import get_db, settings
 from app.models.user import User
+from app.rate_limit import limiter
 from app.schemas.user import UserCreate, LoginRequest, UserOut, Token, ForgotPasswordRequest, ResetPasswordRequest, MessageResponse
 from app.services.auth import hash_password, verify_password, create_access_token, decode_access_token, generate_reset_token, RESET_TOKEN_EXPIRE_MINUTES
 from app.services.email import send_reset_email
@@ -32,7 +33,8 @@ def get_current_user(
 
 
 @router.post("/register", response_model=Token)
-def register(req: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def register(request: Request, req: UserCreate, db: Session = Depends(get_db)):
     email = req.email.strip().lower()
     username = req.username.strip()
     if len(username) < 3:
@@ -49,7 +51,8 @@ def register(req: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, req: LoginRequest, db: Session = Depends(get_db)):
     email = req.email.strip().lower()
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(req.password, user.password_hash):
@@ -66,7 +69,8 @@ _GENERIC_RESET_MESSAGE = "If an account exists for that email, a reset link has 
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
-def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def forgot_password(request: Request, req: ForgotPasswordRequest, db: Session = Depends(get_db)):
     email = req.email.strip().lower()
     user = db.query(User).filter(User.email == email).first()
     if user:
@@ -79,7 +83,8 @@ def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/reset-password", response_model=MessageResponse)
-def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def reset_password(request: Request, req: ResetPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.reset_token == req.token).first()
     if not user or not user.reset_token_expires:
         raise HTTPException(status_code=400, detail="Invalid or expired reset link")
