@@ -130,6 +130,51 @@ const PATHS = {
   heart: (
     <path d="M12 20.5s-7.5-4.6-10-9.3C.5 8 2 4.5 5.5 4c2-.3 3.9.7 5 2.3C11.6 4.7 13.5 3.7 15.5 4c3.5.5 5 4 3.5 7.2-2.5 4.7-10 9.3-10 9.3z" />
   ),
+  flame: (
+    <path d="M12 21a7 7 0 01-7-7c0-4 3-6 4-10 1 2 1 4 3 4s2-2 1-4c3 2 6 6 6 10a7 7 0 01-7 7z" />
+  ),
+  link: (
+    <>
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+    </>
+  ),
+  history: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5V12l3.2 2" />
+    </>
+  ),
+  grid: (
+    <>
+      <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5" />
+      <rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5" />
+      <rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5" />
+      <rect x="13" y="13" width="7.5" height="7.5" rx="1.5" />
+    </>
+  ),
+  hatchback: (
+    <>
+      <path d="M3 16V13L6 10L8 9H15L17 12L19 13V16Z" />
+      <circle cx="7" cy="16.5" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="16" cy="16.5" r="1.5" fill="currentColor" stroke="none" />
+    </>
+  ),
+  sedan: (
+    <>
+      <path d="M2 16V13L5 10L7 9H12L14 11.5L20 12L21 13.5V16Z" />
+      <circle cx="6" cy="16.5" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="17" cy="16.5" r="1.5" fill="currentColor" stroke="none" />
+    </>
+  ),
+  list: (
+    <>
+      <path d="M8 6h13M8 12h13M8 18h13" />
+      <circle cx="3.5" cy="6" r="1" fill="currentColor" stroke="none" />
+      <circle cx="3.5" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="3.5" cy="18" r="1" fill="currentColor" stroke="none" />
+    </>
+  ),
 }
 
 /**
