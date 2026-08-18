@@ -99,6 +99,11 @@ Auto-Verse/
    ```
    API runs at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
 
+7. Run the backend test suite (unit tests for the EMI, ownership cost, depreciation, and recommendation scoring logic — no database needed):
+   ```bash
+   pytest
+   ```
+
 ### Frontend Setup
 
 1. Navigate to the frontend folder:
