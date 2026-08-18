@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, forwardRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { useAuth } from '../context/AuthContext'
 import { forgotPassword } from '../api/auth'
 import PasswordStrengthBar from './ui/PasswordStrengthBar'
+import PasswordField from './ui/PasswordField'
+import AuthHeader from './ui/AuthHeader'
+import FormError from './ui/FormError'
 
 function UserIcon() {
   return (
@@ -30,49 +33,47 @@ function LockIcon() {
   )
 }
 
-function EyeIcon({ open }) {
-  return open ? (
-    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.22A10.48 10.48 0 001.5 12c1.7 4.28 5.9 7.5 10.5 7.5 1.6 0 3.13-.36 4.5-1.02M8.7 6.14A10.6 10.6 0 0112 5.5c4.6 0 8.8 3.22 10.5 7.5a11.36 11.36 0 01-2.16 3.36M14.83 14.83a3 3 0 11-4.24-4.24" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18" />
-    </svg>
-  ) : (
-    <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M1.5 12c1.7-4.28 5.9-7.5 10.5-7.5s8.8 3.22 10.5 7.5c-1.7 4.28-5.9 7.5-10.5 7.5S3.2 16.28 1.5 12z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-  )
-}
-
-function IconInput({ icon, ...props }) {
+const IconInput = forwardRef(function IconInput({ icon, ...props }, ref) {
   return (
     <div className="relative">
       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">{icon}</span>
       <input
+        ref={ref}
         {...props}
         className="w-full text-sm border border-border rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white transition-colors"
       />
     </div>
   )
-}
+})
 
 export default function AuthModal() {
-  const { authModalOpen, closeAuthModal, login, register } = useAuth()
+  const { authModalOpen, closeAuthModal, login, register, sessionExpired } = useAuth()
   const [mode, setMode] = useState('login') // 'login' | 'register' | 'forgot'
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [forgotSent, setForgotSent] = useState(false)
+  const firstFieldRef = useRef(null)
 
   useEffect(() => {
     if (authModalOpen) {
       setUsername(''); setEmail(''); setPassword(''); setError(null); setMode('login')
-      setShowPassword(false); setForgotSent(false)
+      setForgotSent(false)
+      // Wait a beat for the entrance animation to mount the field before
+      // focusing it, so focus doesn't land while the modal is still sliding in.
+      const t = setTimeout(() => firstFieldRef.current?.focus(), 150)
+      return () => clearTimeout(t)
     }
   }, [authModalOpen])
+
+  useEffect(() => {
+    if (!authModalOpen) return
+    const onKeyDown = e => { if (e.key === 'Escape') closeAuthModal() }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [authModalOpen, closeAuthModal])
 
   const switchTab = (next) => {
     if (next === mode) return
@@ -129,25 +130,14 @@ export default function AuthModal() {
         transition={{ type: 'spring', stiffness: 340, damping: 30 }}
         className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
       >
-        {/* Gradient header */}
-        <div className="relative bg-gradient-to-br from-primary to-primary-dark px-6 pt-6 pb-8 text-center">
-          <button
-            onClick={closeAuthModal}
-            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
-            aria-label="Close"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          <div className="flex items-center justify-center gap-1 mb-1.5">
-            <span className="text-2xl font-display font-bold text-white">Auto</span>
-            <span className="text-2xl font-display font-bold text-accent">Verse</span>
-          </div>
-          <p className="text-sm text-teal-100/90">
-            {mode === 'forgot' ? 'Reset your password' : 'Unlock EMI, Ownership Cost & Recommendations'}
-          </p>
-        </div>
+        <AuthHeader
+          onClose={closeAuthModal}
+          subtitle={
+            mode === 'forgot' ? 'Reset your password'
+            : sessionExpired ? 'Your session expired — log back in to continue'
+            : 'Unlock EMI, Ownership Cost & Recommendations'
+          }
+        />
 
         {mode !== 'forgot' && (
           /* Tab switcher — overlaps the header for a layered look */
@@ -206,18 +196,18 @@ export default function AuthModal() {
               <form onSubmit={handleForgotSubmit} className="space-y-3.5">
                 <p className="text-sm text-muted -mt-1 mb-1">Enter your email and we'll send you a link to reset your password.</p>
                 <IconInput
+                  ref={firstFieldRef}
                   icon={<EnvelopeIcon />}
                   type="email"
                   required
+                  autoComplete="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   aria-label="Email"
                 />
 
-                {error && (
-                  <p className="text-sm text-error bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
-                )}
+                <FormError message={error} />
 
                 <button
                   type="submit"
@@ -233,10 +223,12 @@ export default function AuthModal() {
           <form onSubmit={handleSubmit} className="px-6 pt-5 pb-6 space-y-3.5">
             {mode === 'register' && (
               <IconInput
+                ref={firstFieldRef}
                 icon={<UserIcon />}
                 type="text"
                 required
                 minLength={3}
+                autoComplete="username"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 placeholder="Username"
@@ -245,9 +237,11 @@ export default function AuthModal() {
             )}
 
             <IconInput
+              ref={mode === 'register' ? undefined : firstFieldRef}
               icon={<EnvelopeIcon />}
               type="email"
               required
+              autoComplete={mode === 'register' ? 'email' : 'username'}
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="Email address"
@@ -255,29 +249,16 @@ export default function AuthModal() {
             />
 
             <div>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
-                  <LockIcon />
-                </span>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full text-sm border border-border rounded-xl pl-10 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary bg-white transition-colors"
-                  placeholder="Password"
-                  aria-label="Password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(s => !s)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  <EyeIcon open={showPassword} />
-                </button>
-              </div>
+              <PasswordField
+                icon={<LockIcon />}
+                required
+                minLength={6}
+                autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Password"
+                aria-label="Password"
+              />
 
               {mode === 'register' ? (
                 <PasswordStrengthBar password={password} />
@@ -293,7 +274,7 @@ export default function AuthModal() {
             </div>
 
             {error && (
-              <p className="text-sm text-error bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+              <FormError message={error} />
             )}
 
             <button
