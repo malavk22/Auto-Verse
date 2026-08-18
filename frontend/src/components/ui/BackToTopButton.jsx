@@ -2,10 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 
 // Self-contained floating button - manages its own scroll listener, no
-// props needed from the page it's dropped into. Appears once you've
-// scrolled a full screen or more down, for pages long enough that a
-// manual scroll back up is a real chore (Car Detail with specs + similar
-// cars loaded, Home with every section rendered).
+// props needed. Appears once you've scrolled a full screen or more down.
 export default function BackToTopButton({ threshold = 700 }) {
   const [show, setShow] = useState(false)
 
