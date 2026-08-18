@@ -104,12 +104,15 @@ def test_body_type_preference_matches_by_model():
 
 def test_recommend_cars_sorts_descending_and_respects_top_n():
     req = _req(budget=Decimal("1000000"), fuel_type="Petrol", top_n=2)
+    # Distinct models - recommend_cars() dedups to one result per (brand,
+    # model), so same-model cars here would collapse to a single entry
+    # instead of exercising sort/top_n across 3 separate results.
     cars = [
-        make_car(id=1, price=Decimal("950000"), fuel_type="Petrol"),   # high budget-fit + fuel match
-        make_car(id=2, price=Decimal("100000"), fuel_type="Diesel"),   # low budget-fit, no fuel match
-        make_car(id=3, price=Decimal("800000"), fuel_type="Petrol"),   # mid budget-fit + fuel match
+        make_car(id=1, model="Swift", price=Decimal("950000"), fuel_type="Petrol"),   # high budget-fit + fuel match
+        make_car(id=2, model="i20", price=Decimal("100000"), fuel_type="Diesel"),   # low budget-fit, no fuel match
+        make_car(id=3, model="Baleno", price=Decimal("800000"), fuel_type="Petrol"),   # mid budget-fit + fuel match
         make_car(  # over budget, and no baseline bonus applies either -> scores 0, excluded
-            id=4, price=Decimal("2000000"), fuel_type="Diesel",
+            id=4, model="WagonR", price=Decimal("2000000"), fuel_type="Diesel",
             mileage=Decimal("10"), service_cost=Decimal("25000"),
         ),
     ]
