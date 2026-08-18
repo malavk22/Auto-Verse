@@ -143,15 +143,10 @@ export default function OwnershipCalculator() {
   const [error, setError] = useState(null)
   const resultsRef = useRef(null)
 
-  // Results only ever recompute on an explicit Calculate click - condition,
-  // deduction checkboxes, years, distance, and fuel price can all be
-  // changed freely afterward with no live recalculation, which silently
-  // left the displayed numbers stale with nothing telling you they no
-  // longer matched the current inputs (user-reported: "why does the price
-  // stay the same after changing condition"). `lastCalculatedKeyRef` snapshots
-  // the exact inputs a result was computed from; comparing it against the
-  // *current* inputs on every render gives a cheap, always-correct `isStale`
-  // with no extra effect/state to keep in sync.
+  // Results only recompute on an explicit Calculate click, so changing an
+  // input afterward silently leaves stale numbers on screen. Snapshotting
+  // the inputs a result was computed from and comparing on every render
+  // gives a cheap, always-correct `isStale` flag.
   const lastCalculatedKeyRef = useRef(null)
   const currentInputsKey = JSON.stringify({ carId: car?.id, years, annualKm, fuelPrice, condition, accidentHistory, multipleOwners, noServiceRecords })
   const isStale = !!result && lastCalculatedKeyRef.current !== currentInputsKey
@@ -167,11 +162,8 @@ export default function OwnershipCalculator() {
   useEffect(() => {
     if (!urlCarId) return
     setCarLoading(true)
-    // Clears any results already on screen - without this, navigating here
-    // via a *different* car's "Calculate Ownership Cost" link while a
-    // previous car's results were still showing left those stale figures
-    // displayed against the newly-loaded car in Step 1 until Calculate was
-    // clicked again, silently mismatched in the meantime.
+    // Clears any results already on screen - otherwise navigating here via
+    // a different car's link left stale figures mismatched with Step 1.
     setResult(null)
     setDepreciation(null)
     getCar(urlCarId)
@@ -287,12 +279,8 @@ export default function OwnershipCalculator() {
         ) : (
           <div className="space-y-4">
             {/* Quick-pick from Recently Viewed - covers the direct-navbar
-                entry path (no car preselected via ?car_id=), which otherwise
-                always started from a blank Brand dropdown even if you were
-                just looking at a car. Deliberately small/optional-looking so
-                it doesn't compete with the primary Brand→Model flow below -
-                just a shortcut, not a second flow. Hidden entirely when
-                there's no history yet (first-time visitor). */}
+                entry path, which otherwise always started from a blank
+                Brand dropdown. Hidden when there's no history yet. */}
             {recentlyViewed.length > 0 && (
               <div>
                 <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-2">Recently Viewed</label>
