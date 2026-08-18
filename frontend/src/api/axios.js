@@ -3,8 +3,13 @@ import axios from 'axios'
 export const TOKEN_KEY = 'autoverse_token'
 
 const api = axios.create({
-  baseURL: '/api/v1',
+  // Falls back to the relative path in local dev (Vite's proxy handles it).
+  // Production needs the real backend URL via VITE_API_BASE_URL instead.
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
   headers: { 'Content-Type': 'application/json' },
+  // Without this, a hung request never resolves or rejects - just sits
+  // pending forever, which a few pages' `.catch(() => {})` can't recover from.
+  timeout: 15000,
 })
 
 api.interceptors.request.use(config => {
