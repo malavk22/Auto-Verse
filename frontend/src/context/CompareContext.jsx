@@ -26,11 +26,8 @@ export function CompareProvider({ children }) {
 
   const isInCompare = (id) => compareList.some(c => c.id === id)
 
-  // Bulk-replaces the whole list in one go - used when a shared/bookmarked
-  // comparison link (/compare?ids=1,2,3) is opened, so the visitor's local
-  // comparison adopts exactly those cars and the usual remove/clear/add
-  // actions keep working normally on it afterward, rather than the page
-  // just silently rendering something that's disconnected from this context.
+  // Bulk-replaces the whole list - used when a shared comparison link is
+  // opened, so remove/clear/add still work normally on it afterward.
   const replaceCompare = (cars) => setCompareList(cars)
 
   return (

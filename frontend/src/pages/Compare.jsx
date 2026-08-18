@@ -124,11 +124,8 @@ function cellClass(spec, car, allCars) {
   return ''
 }
 
-// The gap between this car's value and the best value in the row, e.g.
-// "+3.2 kmpl" or "+₹15L" - shown under non-winning cells so the color-coded
-// highlight isn't the only signal; a red/plain cell says "worse", this says
-// *how much* worse. Returns null for the winning cell itself (nothing to
-// show), non-comparable specs, and 1-car comparisons.
+// The gap between this car's value and the row's best, e.g. "+3.2 kmpl" -
+// shown under non-winning cells so color isn't the only signal.
 function deltaText(spec, car, allCars) {
   if (!spec.compare || !spec.raw || !spec.delta || allCars.length < 2) return null
   const vals = allCars.map(c => spec.raw(c)).filter(v => v != null && !isNaN(v))
@@ -270,13 +267,9 @@ export default function Compare() {
   const [showRecap, setShowRecap] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
-  // Adopts a shared/bookmarked comparison link (/compare?ids=1,2,3) once, on
-  // first mount - the visitor's local comparison becomes exactly those cars
-  // (via `replaceCompare`) so the usual remove/clear/add-another-car actions
-  // keep working on it normally afterward. Deliberately `[]` deps: this
-  // should only ever act on the URL the page was opened with, not re-fire
-  // as `compareList` changes underneath it (which would fight the URL-sync
-  // effect below every time a car is removed).
+  // Adopts a shared/bookmarked comparison link once, on first mount, so
+  // remove/clear/add-another still work normally afterward. Deliberately
+  // `[]` deps - shouldn't re-fire as compareList changes underneath it.
   useEffect(() => {
     const urlIds = searchParams.get('ids')
     if (!urlIds) return
