@@ -13,3 +13,5 @@ export const getHomeHighlights = () => api.get('/cars/home/highlights').then(r =
 export const compareCars = (ids) => api.get('/cars/compare', { params: { ids } }).then(r => r.data)
 
 export const getAutocomplete = (q) => api.get('/cars/autocomplete', { params: { q } }).then(r => r.data)
+
+export const getSimilarCars = (id) => api.get(`/cars/${id}/similar`).then(r => r.data)
