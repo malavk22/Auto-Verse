@@ -5,7 +5,7 @@ The dataset has no body_type column - all 10,000+ rows were seeded from a
 CSV/scraped source with only brand/model/year/spec fields. Body type doesn't
 vary by year or trim for a given model (a Swift is always a hatchback), so
 rather than adding and backfilling a new DB column across every row, this is
-a one-time model-name -> segment lookup (all 97 distinct models currently in
+a one-time model-name -> segment lookup (all 117 distinct models currently in
 the dataset, classified against each manufacturer's actual market segment)
 used by the recommendation engine to filter/score by body type.
 
@@ -26,17 +26,18 @@ MODEL_BODY_TYPE = {
     "C3": HATCHBACK, "eC3": HATCHBACK, "Jazz": HATCHBACK, "i10": HATCHBACK,
     "i20": HATCHBACK, "Baleno": HATCHBACK, "Swift": HATCHBACK, "WagonR": HATCHBACK,
     "Cooper S": HATCHBACK, "Kwid": HATCHBACK, "Altroz": HATCHBACK, "Tiago": HATCHBACK,
-    "Glanza": HATCHBACK, "Polo": HATCHBACK,
+    "Glanza": HATCHBACK, "Polo": HATCHBACK, "Cooper Convertible": HATCHBACK,
 
     # ── Sedan ────────────────────────────────────────────────────────────────
     "A4": SEDAN, "A6": SEDAN, "3 Series": SEDAN, "Seal": SEDAN, "Amaze": SEDAN,
     "City": SEDAN, "Civic": SEDAN, "Verna": SEDAN, "ES": SEDAN, "Dzire": SEDAN,
     "C-Class": SEDAN, "Octavia": SEDAN, "Rapid": SEDAN, "Slavia": SEDAN,
     "Superb": SEDAN, "Camry": SEDAN, "Vento": SEDAN, "Virtus": SEDAN,
+    "Panamera": SEDAN, "5 Series": SEDAN, "E-Class": SEDAN, "S-Class": SEDAN,
 
     # ── MUV / MPV ────────────────────────────────────────────────────────────
     "eMAX 7": MUV, "Carens": MUV, "Carnival": MUV, "Ertiga": MUV, "Lodgy": MUV,
-    "Triber": MUV, "Innova": MUV,
+    "Triber": MUV, "Innova": MUV, "Gravite": MUV, "Urbania": MUV,
 
     # ── SUV (includes crossovers / coupe-SUVs) ──────────────────────────────
     "Q3": SUV, "Q5": SUV, "X1": SUV, "X3": SUV, "Atto 3": SUV, "Sealion 7": SUV,
@@ -53,6 +54,14 @@ MODEL_BODY_TYPE = {
     "Kushaq": SUV, "Kylaq": SUV, "Harrier": SUV, "Nexon": SUV, "Punch": SUV, "Sierra": SUV,
     "Fortuner": SUV, "Urban Cruiser": SUV, "Urban Cruiser Taisor": SUV,
     "Taigun": SUV, "Tayron": SUV, "Tiguan": SUV, "EX30": SUV, "XC60": SUV,
+    "Countryman Electric": SUV, "EC40": SUV, "XC90": SUV, "Range Rover Sport": SUV,
+    "Range Rover": SUV, "RX": SUV, "LX": SUV, "X5": SUV, "Grand Cherokee": SUV,
+    "MU-X": SUV, "Gurkha": SUV,
+
+    # "911" (2-seat sports coupe) and "V-Cross" (pickup truck) are
+    # deliberately left unclassified - neither fits Hatchback/Sedan/SUV/MUV,
+    # and forcing one would misclassify it rather than the safe "excluded
+    # from every body-type filter" fallback documented above.
 }
 
 
