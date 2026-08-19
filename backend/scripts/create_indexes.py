@@ -20,8 +20,17 @@ INDEXES = [
 
 def main():
     db = SessionLocal()
+    dialect = db.bind.dialect.name  # 'mssql' or 'postgresql', depending on DATABASE_URL
     try:
         for name, table, cols in INDEXES:
+            if dialect == "postgresql":
+                # Postgres has no NONCLUSTERED concept, and IF NOT EXISTS
+                # covers idempotency natively - no separate existence check needed.
+                db.execute(text(f"CREATE INDEX IF NOT EXISTS {name} ON {table} ({cols})"))
+                db.commit()
+                print(f"create/skip {name} ON {table} ({cols})")
+                continue
+
             exists = db.execute(
                 text("SELECT 1 FROM sys.indexes WHERE name = :name"),
                 {"name": name},
