@@ -14,6 +14,13 @@ import { gridContainer, gridItem } from '../utils/motionVariants'
 
 const DEFAULT_FILTERS = { sort: 'year_desc', page: 1, limit: 20 }
 
+// Persists the last-used filters/sort so a bare "/cars" link (e.g. the
+// breadcrumb "Cars" crumb on Car Detail, which has no query string of its
+// own) restores where you left off instead of silently resetting to
+// defaults - explicit filtered links (which do carry query params) still
+// take priority over this, see filtersFromParams below.
+const FILTERS_KEY = 'autoverse_car_filters'
+
 // Matches CarListRow's shape (thumbnail, title/spec block, price, actions)
 // for list view's loading state, same reasoning as CarCardSkeleton above.
 function CarListRowSkeleton() {
@@ -55,6 +62,16 @@ export default function CarListing() {
   }
 
   const filtersFromParams = () => {
+    // No query string at all (e.g. arrived via a bare "/cars" link) - fall
+    // back to whatever was last browsed instead of defaults, if we have it.
+    if ([...searchParams].length === 0) {
+      try {
+        const saved = sessionStorage.getItem(FILTERS_KEY)
+        if (saved) return { ...DEFAULT_FILTERS, ...JSON.parse(saved), page: 1 }
+      } catch {}
+      return { ...DEFAULT_FILTERS }
+    }
+
     const f = { ...DEFAULT_FILTERS }
     if (searchParams.get('brand')) f.brand = searchParams.get('brand')
     if (searchParams.get('fuel_type')) f.fuel_type = searchParams.get('fuel_type')
@@ -84,10 +101,12 @@ export default function CarListing() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    // Sync filters back to URL
+    // Sync filters back to URL, and remember them for the next bare "/cars"
+    // visit (see FILTERS_KEY above).
     const params = {}
     Object.entries(filters).forEach(([k, v]) => { if (v !== undefined && v !== null) params[k] = v })
     setSearchParams(params, { replace: true })
+    try { sessionStorage.setItem(FILTERS_KEY, JSON.stringify(filters)) } catch {}
 
     getCars(filters)
       .then(data => { if (!cancelled) { setCars(data); setLoading(false) } })
