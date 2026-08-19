@@ -31,7 +31,6 @@ export default function PriceCard({ car, cardRef }) {
     <div ref={cardRef} className="w-full sm:w-64 shrink-0 bg-surface-alt rounded-xl p-4 text-right">
       <p className="text-xs text-muted mb-1">Ex-showroom price</p>
       <p className="text-3xl font-display font-bold text-primary leading-tight">{formatLakhOrCrore(car.price)}</p>
-      <p className="text-sm text-muted">{formatINR(car.price)}</p>
       {monthlyEmi != null && (
         <p
           className="text-xs text-gray-600 mt-1 mb-3"
