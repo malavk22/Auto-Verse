@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'motion/react'
 import { getFavorites } from '../api/favorites'
+import { useAuth } from '../context/AuthContext'
 import { useFavorites } from '../context/FavoritesContext'
 import CarCard from '../components/CarCard'
 import CarCardSkeleton from '../components/ui/CarCardSkeleton'
@@ -19,16 +20,21 @@ const SORT_OPTIONS = [
 ]
 
 export default function Favorites() {
+  const { isAuthenticated, openAuthModal } = useAuth()
   const { isFavorited } = useFavorites()
   const [cars, setCars] = useState(null)
   const [error, setError] = useState(null)
   const [sort, setSort] = useState('recent')
 
+  // Not logged in isn't a failure - calling the API anyway just produced a
+  // 401 that looked like a generic error ("Failed to load, try again") to
+  // a guest visitor, when the real answer is simply "log in first".
   useEffect(() => {
+    if (!isAuthenticated) return
     getFavorites()
       .then(setCars)
       .catch(() => setError('Failed to load favorites. Please try again.'))
-  }, [])
+  }, [isAuthenticated])
 
   const visibleCars = cars?.filter(car => isFavorited(car.id))
   const sortedCars = sort === 'price_asc'
@@ -57,7 +63,17 @@ export default function Favorites() {
 
       {error && <p className="text-sm text-error text-center">{error}</p>}
 
-      {cars === null && !error ? (
+      {!isAuthenticated ? (
+        <div className="bg-white rounded-2xl shadow-card">
+          <EmptyState
+            icon="heart"
+            tone="rose"
+            title="Log in to see your favorites"
+            description="Your saved cars are tied to your account."
+            action={<button onClick={openAuthModal} className="text-sm font-semibold text-primary hover:underline">Log In</button>}
+          />
+        </div>
+      ) : cars === null && !error ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
           {Array.from({ length: 3 }).map((_, i) => <CarCardSkeleton key={i} />)}
         </div>
