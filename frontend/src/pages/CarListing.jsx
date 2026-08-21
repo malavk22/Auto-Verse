@@ -146,7 +146,7 @@ export default function CarListing() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28">
       <div className="flex gap-8">
         {/* Desktop sidebar */}
         <motion.div

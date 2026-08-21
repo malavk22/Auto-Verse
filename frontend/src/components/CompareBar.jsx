@@ -9,7 +9,9 @@ export default function CompareBar() {
   const empty = compareList.length === 0
   // Home is a landing page, not a browsing page - the empty-state hint bar
   // reads as clutter there. Still appears once something's actually added.
-  const hidden = empty && location.pathname === '/'
+  // Reset Password is a focused, single-task auth page - comparing cars is
+  // irrelevant there regardless of what's already in the compare list.
+  const hidden = (empty && location.pathname === '/') || location.pathname === '/reset-password'
 
   return (
     <AnimatePresence>

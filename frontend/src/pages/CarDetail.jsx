@@ -258,7 +258,7 @@ export default function CarDetail() {
 
       <BackToTopButton />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 pb-24">
       {/* Breadcrumb - replaces the old plain "← Back to listing" link with a
           real trail (Home / Cars / Brand / Model) so it's clear where this
           page sits in the site, and the brand step is a one-click shortcut
