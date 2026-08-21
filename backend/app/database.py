@@ -6,8 +6,11 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     DATABASE_URL: str
     JWT_SECRET_KEY: str = "dev-only-insecure-secret-change-me"
-    SMTP_EMAIL: str = ""
-    SMTP_APP_PASSWORD: str = ""
+    # Resend (https://resend.com) sends password-reset emails over HTTPS -
+    # unlike raw SMTP, this isn't blocked by hosts (e.g. Render's free tier)
+    # that block outbound SMTP ports to prevent spam abuse.
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = "AutoVerse <onboarding@resend.dev>"
     FRONTEND_URL: str = "http://localhost:5173"
     # Comma-separated list of allowed CORS origins - see main.py. Defaults to
     # local dev; production sets this via App Service's env vars to the real

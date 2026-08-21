@@ -1,6 +1,6 @@
 import logging
-import smtplib
-from email.message import EmailMessage
+
+import requests
 
 from app.database import settings
 
@@ -79,25 +79,27 @@ def _html(username: str, email: str, reset_link: str) -> str:
 
 
 def send_reset_email(to_email: str, reset_link: str, username: str = "") -> None:
-    if not settings.SMTP_EMAIL or not settings.SMTP_APP_PASSWORD:
-        logger.warning("SMTP not configured; skipping reset email to %s. Link: %s", to_email, reset_link)
+    if not settings.RESEND_API_KEY:
+        logger.warning("RESEND_API_KEY not configured; skipping reset email to %s. Link: %s", to_email, reset_link)
         return
 
     display_name = username or to_email.split("@")[0]
 
-    msg = EmailMessage()
-    msg["Subject"] = "Reset your AutoVerse password"
-    msg["From"] = f"AutoVerse <{settings.SMTP_EMAIL}>"
-    msg["To"] = to_email
-    # Plain text first as the fallback, then an HTML alternative on top -
-    # clients that render HTML show that; anything that can't (or a user
-    # who's set their client to plain text) falls back automatically.
-    msg.set_content(_plain_text(display_name, to_email, reset_link))
-    msg.add_alternative(_html(display_name, to_email, reset_link), subtype="html")
-
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-            server.login(settings.SMTP_EMAIL, settings.SMTP_APP_PASSWORD)
-            server.send_message(msg)
+        # Resend's HTTPS API - unlike SMTP, this isn't blocked on hosts that
+        # block outbound SMTP ports (see RESEND_API_KEY comment in database.py).
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {settings.RESEND_API_KEY}"},
+            json={
+                "from": settings.RESEND_FROM_EMAIL,
+                "to": [to_email],
+                "subject": "Reset your AutoVerse password",
+                "text": _plain_text(display_name, to_email, reset_link),
+                "html": _html(display_name, to_email, reset_link),
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
     except Exception:
         logger.exception("Failed to send reset email to %s", to_email)
