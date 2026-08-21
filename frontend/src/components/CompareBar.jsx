@@ -37,7 +37,7 @@ export default function CompareBar() {
             </div>
 
             {/* Slots */}
-            <div className="flex gap-2 flex-1 overflow-x-auto">
+            <div className="flex gap-2 flex-1 min-w-0 overflow-x-auto">
               {empty ? (
                 <p className="text-xs text-gray-400 py-1">
                   Click <span className="font-semibold">+ Add to Compare</span> on any car card to compare up to 3 cars side by side
