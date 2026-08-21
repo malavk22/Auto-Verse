@@ -12,7 +12,7 @@ import ResultCard from '../components/recommendations/ResultCard'
 import ResultsSkeleton from '../components/recommendations/ResultsSkeleton'
 import { gridContainer, gridItem } from '../utils/motionVariants'
 
-const FUEL_OPTIONS = ['Petrol', 'Diesel', 'CNG', 'Electric']
+const FUEL_OPTIONS = ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid']
 const SEAT_OPTIONS = [4, 5, 6, 7]
 const TRANSMISSION_OPTIONS = ['Manual', 'Automatic']
 const PRIORITY_OPTIONS = [
