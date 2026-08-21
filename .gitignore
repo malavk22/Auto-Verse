@@ -21,6 +21,11 @@ instance/
 .env
 .env.*
 !.env.example
+autopass.txt
+
+# ===== DB dumps (never publish real data / stale dumps) =====
+*.sql
+*.dump
 
 # ===== Node / React / Vite frontend =====
 node_modules/
