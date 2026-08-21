@@ -50,7 +50,7 @@ export default function CompareBar() {
                     Click <span className="font-semibold">+ Add to Compare</span> on any car card to compare up to 3 cars side by side
                   </p>
                   <p className="sm:hidden text-xs text-gray-400 py-1 truncate">
-                    Add cars to compare
+                    Add cars
                   </p>
                 </>
               ) : (
