@@ -37,7 +37,7 @@ export default function CompareBar() {
             </div>
 
             {/* Slots */}
-            <div className="flex gap-2 flex-1 min-w-0 overflow-x-auto">
+            <div className="flex gap-2 flex-1 min-w-0 overflow-x-auto snap-x snap-mandatory">
               {empty ? (
                 <p className="text-xs text-gray-400 py-1">
                   Click <span className="font-semibold">+ Add to Compare</span> on any car card to compare up to 3 cars side by side
@@ -53,7 +53,7 @@ export default function CompareBar() {
                         animate={{ opacity: 1, scale: 1, width: 'auto' }}
                         exit={{ opacity: 0, scale: 0.8, width: 0 }}
                         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                        className="flex items-center gap-1.5 bg-primary/5 border border-primary/20 rounded-lg px-3 py-1 text-sm whitespace-nowrap overflow-hidden"
+                        className="flex items-center gap-1.5 bg-primary/5 border border-primary/20 rounded-lg px-3 py-1 text-sm whitespace-nowrap overflow-hidden shrink-0 snap-start"
                       >
                         <span className="font-medium text-gray-800 text-xs">{car.brand?.name} {car.model}</span>
                         <button
@@ -70,7 +70,7 @@ export default function CompareBar() {
                     <button
                       key={i}
                       onClick={() => navigate('/cars')}
-                      className="flex items-center gap-1 border border-dashed border-gray-300 rounded-lg px-3 py-1 text-xs text-gray-400 whitespace-nowrap hover:border-primary hover:text-primary transition-colors"
+                      className="flex items-center gap-1 border border-dashed border-gray-300 rounded-lg px-3 py-1 text-xs text-gray-400 whitespace-nowrap hover:border-primary hover:text-primary transition-colors shrink-0 snap-start"
                     >
                       + Add car
                     </button>
