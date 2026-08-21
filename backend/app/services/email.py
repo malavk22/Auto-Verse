@@ -96,7 +96,7 @@ def send_reset_email(to_email: str, reset_link: str, username: str = "") -> None
     msg.add_alternative(_html(display_name, to_email, reset_link), subtype="html")
 
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
             server.login(settings.SMTP_EMAIL, settings.SMTP_APP_PASSWORD)
             server.send_message(msg)
     except Exception:

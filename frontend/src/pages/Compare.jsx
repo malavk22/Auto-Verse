@@ -555,8 +555,8 @@ export default function Compare() {
 
             <div className="p-6">
               {/* Winner highlight card */}
-              <div className="flex gap-5 bg-teal-50 border border-teal-200 rounded-xl p-5 mb-6">
-                <div className="w-36 h-24 rounded-xl overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">
+              <div className="flex flex-col sm:flex-row gap-5 bg-teal-50 border border-teal-200 rounded-xl p-5 mb-6">
+                <div className="w-full h-32 sm:w-36 sm:h-24 rounded-xl overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">
                   <CarThumb car={winner} className="w-10 h-10 text-gray-300" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -607,7 +607,7 @@ export default function Compare() {
                       <p className="text-[10px] font-bold text-teal-600 uppercase tracking-widest mb-2">Why it wins</p>
                       <div className="space-y-1.5">
                         {reasons.map((r, j) => (
-                          <div key={j} className="flex items-baseline gap-2 text-sm">
+                          <div key={j} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
                             <span className="text-xs text-gray-400 w-24 shrink-0">{r.label}</span>
                             <span className="font-semibold text-teal-800">{r.value}</span>
                             <span className="text-xs text-gray-400">vs {r.others.join(' · ')}</span>
